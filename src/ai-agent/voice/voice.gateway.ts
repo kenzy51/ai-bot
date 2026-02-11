@@ -6,6 +6,7 @@ import {
 } from '@nestjs/websockets';
 import { GeminiService } from '../gemini/gemini.service';
 import * as WebSocket from 'ws';
+import { LiveTranscriptionEvents } from "@deepgram/sdk";
 
 @WebSocketGateway({ 
   path: '/media-stream',
@@ -18,10 +19,48 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleConnection(twilioWs: WebSocket) {
     console.log('🚀 Twilio connected to WebSocket');
 
-    // 1. Подключаемся к Gemini через сервис
-    const geminiWs = this.geminiService.connectToGemini();
+    // 1. Инициализируем Deepgram через наш сервис
+    const dgLive = this.geminiService.getDeepgramLive();
 
-    // 2. Слушаем сообщения от Twilio
+    // 2. Настраиваем обработку событий Deepgram
+    dgLive.on(LiveTranscriptionEvents.Open, () => {
+      console.log('✅ Deepgram Connection Verified & Opened');
+
+      // Слушаем результаты расшифровки только после открытия сокета
+      dgLive.on(LiveTranscriptionEvents.Transcript, async (data) => {
+        const transcript = data.channel.alternatives[0]?.transcript;
+        
+        if (transcript) {
+          // Выводим промежуточные результаты (Maya "слышит" в реальном времени)
+          console.log(`👤 Hearing: ${transcript}`); 
+          
+          // Если фраза закончена (пациент замолчал)
+          if (data.is_final) {
+            console.log(`✅ Final phrase recognized: ${transcript}`);
+            
+            // Отправляем текст в Groq (мозг)
+            try {
+              const aiResponse = await this.geminiService.generateResponse(transcript);
+              console.log(`🤖 Maya says: ${aiResponse}`);
+              // Здесь в будущем будет вызов TTS для отправки голоса обратно в Twilio
+            } catch (err) {
+              console.error('🔴 Groq Error:', err.message);
+            }
+          }
+        }
+      });
+    });
+
+    // Логируем ошибки Deepgram
+    dgLive.on(LiveTranscriptionEvents.Error, (err) => {
+      console.error('🔴 Deepgram WebSocket Error:', err);
+    });
+
+    dgLive.on(LiveTranscriptionEvents.Close, () => {
+      console.log('🔌 Deepgram Connection Closed');
+    });
+
+    // 3. Обработка входящих сообщений от Twilio
     twilioWs.on('message', (data: string) => {
       try {
         const msg = JSON.parse(data);
@@ -33,25 +72,20 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
             break;
 
           case 'media':
-            // Пересылаем аудио в Gemini, если сокет открыт
-            if (geminiWs.readyState === WebSocket.OPEN) {
-              const geminiPayload = {
-                realtime_input: {
-                  media_chunks: [
-                    {
-                      mime_type: 'audio/mulaw',
-                      data: msg.media.payload, // Base64 от Twilio
-                    },
-                  ],
-                },
-              };
-              geminiWs.send(JSON.stringify(geminiPayload));
+            // Пересылаем аудио-байты в Deepgram
+            // Важно: проверяем состояние готовности (1 = OPEN)
+            if (dgLive.getReadyState() === 1) {
+              const audioBuffer = Buffer.from(msg.media.payload, 'base64');
+              // Используем Uint8Array для совместимости с SDK v3
+              dgLive.send(new Uint8Array(audioBuffer) as any);
             }
             break;
 
           case 'stop':
             console.log('⏹️ Twilio sent stop event');
-            geminiWs.close();
+            if (dgLive.getReadyState() === 1) {
+                dgLive.requestClose();
+            }
             break;
         }
       } catch (error) {
@@ -59,49 +93,15 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       }
     });
 
-    // 3. Слушаем ответы от Gemini и пересылаем их в Twilio
-    geminiWs.on('message', (data: WebSocket.Data) => {
-      try {
-        const response = JSON.parse(data.toString());
-        
-        // Извлекаем аудио из структуры Gemini Live API
-        const audioPayload = response.serverContent?.modelTurn?.parts?.[0]?.inlineData?.data;
-
-        if (audioPayload && twilioWs.readyState === WebSocket.OPEN) {
-          console.log(`🎵 Maya is speaking: sending ${audioPayload.length} bytes to Twilio`);
-          
-          const twilioMessage = JSON.stringify({
-            event: 'media',
-            streamSid: this.streamSid,
-            media: {
-              payload: audioPayload,
-            },
-          });
-          
-          twilioWs.send(twilioMessage);
-        }
-      } catch (error) {
-        // Игнорируем ошибки парсинга для не-аудио ответов (например, setup подтверждение)
-      }
-    });
-
-    geminiWs.on('error', (err) => {
-      console.error('🔴 Gemini WebSocket Error:', err);
-    });
-
-    geminiWs.on('close', () => {
-      console.log('🔌 Gemini connection closed');
-    });
-
-    // Сохраняем ссылку, чтобы закрыть при дисконнекте Twilio
-    (twilioWs as any).geminiWs = geminiWs;
+    // Сохраняем ссылку на сокет Deepgram в объекте Twilio-сокета для очистки
+    (twilioWs as any).dgLive = dgLive;
   }
 
   handleDisconnect(twilioWs: WebSocket) {
     console.log('❌ Twilio disconnected');
-    const geminiWs = (twilioWs as any).geminiWs;
-    if (geminiWs) {
-      geminiWs.close();
+    const dgLive = (twilioWs as any).dgLive;
+    if (dgLive && dgLive.getReadyState() === 1) {
+      dgLive.requestClose();
     }
   }
 }

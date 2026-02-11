@@ -1,69 +1,52 @@
 /* eslint-disable prettier/prettier */
 import { Injectable } from '@nestjs/common';
-import * as WebSocket from 'ws';
+import { DeepgramClient, createClient } from "@deepgram/sdk";
+import Groq from "groq-sdk";
 
 @Injectable()
 export class GeminiService {
-  connectToGemini() {
-    // 1. Using v1beta is correct for Bidi
-    const url = `wss://generativelanguage.googleapis.com/ws/google.ai.generativelanguage.v1beta.GenerativeService.BidiGenerateContent?key=${process.env.GEMINI_API_KEY}`;
-    
-    const ws = new WebSocket.WebSocket(url);
+  private deepgram: DeepgramClient;
+  private groq: Groq;
 
-  ws.on('open', () => {
-  const setupConfig = {
-    setup: {
-      // Corrected model ID for the Live API
-      model: "models/gemini-live-2.5-flash-native-audio", 
-      generation_config: {
-        response_modalities: ["AUDIO"],
-        speech_config: {
-          voice_config: {
-            prebuilt_voice_config: {
-              voice_name: "Aoede" // Choose from: Puck, Charon, Kore, Fenrir, Aoede
-            }
-          }
-        }
-      }
-    }
-  };
-  ws.send(JSON.stringify(setupConfig));
-});
-
-    ws.on('message', (data) => {
-      try {
-        const response = JSON.parse(data.toString());
-
-        if (response.setupComplete) {
-          console.log('💎 Gemini Setup Complete!');
-          
-          // 3. SEND SYSTEM INSTRUCTIONS AS A FIRST TURN
-          // Some versions of the Live API prefer system instructions here 
-          // rather than inside the setup block to avoid 1007 errors.
-          const firstTurn = {
-            client_content: {
-              turns: [{
-                role: "user",
-                parts: [{ text: "Your name is Maya. You are a dental assistant at Tribeca Dental Studio. Greet the patient." }]
-              }],
-              turn_complete: true
-            }
-          };
-          ws.send(JSON.stringify(firstTurn));
-        }
-
-        if (response.error) {
-          console.error('❌ Gemini Error Object:', JSON.stringify(response.error, null, 2));
-        }
-      } catch (err) {
-        console.error('Parsing error:', err);
-      }
-    });
-
-    ws.on('close', (code, reason) => {
-      console.log(`🔌 Gemini closed. Code: ${code}, Reason: ${reason.toString()}`);
-    });
-
-    return ws;
+  constructor() {
+    this.deepgram = createClient(process.env.DEEPGRAM_API_KEY);
+    this.groq = new Groq({ apiKey: process.env.GROQ_API_KEY });
   }
+
+  // Этот метод будет вызываться, когда Deepgram расшифрует фразу
+  async generateResponse(userText: string) {
+    console.log(`👤 Patient said: ${userText}`);
+    
+    const chatCompletion = await this.groq.chat.completions.create({
+      messages: [
+        {
+          role: "system",
+          content: "You are Maya, a professional and friendly dental assistant at Tribeca Dental Studio in NYC. Keep answers very short (1-2 sentences). Your goal is to help patients with appointments."
+        },
+        { role: "user", content: userText }
+      ],
+      model: "llama-3.3-70b-versatile", // Очень быстрая и умная модель
+      max_tokens: 100,
+    });
+
+    const aiResponse = chatCompletion.choices[0]?.message?.content || "";
+    console.log(`🤖 Maya says: ${aiResponse}`);
+    return aiResponse;
+  }
+
+  // Метод для создания стрима в Deepgram
+ /* eslint-disable prettier/prettier */
+getDeepgramLive() {
+  return this.deepgram.listen.live({
+    model: "nova-2-phonecall",
+    language: "en-US",
+    // Twilio присылает данные по 20мс, что соответствует 160 байтам в сыром виде, 
+    // но в base64 это как раз около 216 байт.
+    encoding: "mulaw",    
+    sample_rate: 8000,    
+    interim_results: true,
+    endpointing: 300,
+    smart_format: true,
+  });
+}
 }
