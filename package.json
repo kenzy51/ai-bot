@@ -25,12 +25,14 @@
     "@nestjs/core": "^11.0.1",
     "@nestjs/platform-express": "^11.0.1",
     "@nestjs/platform-socket.io": "^11.1.13",
+    "@nestjs/platform-ws": "^11.1.13",
     "@nestjs/websockets": "^11.1.13",
     "dotenv": "^17.2.4",
     "reflect-metadata": "^0.2.2",
     "rxjs": "^7.8.1",
     "socket.io": "^4.8.3",
-    "twilio": "^5.12.1"
+    "twilio": "^5.12.1",
+    "ws": "^8.19.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.2.0",

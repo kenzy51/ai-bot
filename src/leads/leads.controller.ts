@@ -44,7 +44,7 @@ export class LeadsController {
     console.log('--- Incoming call received! ---'); // Это появится в терминале VS Code
     return `<?xml version="1.0" encoding="UTF-8"?>
       <Response>
-        <Say>Hello Kanat! Connecting you to Gemini.</Say>
+        <Say>Hello Kanat! This is front desk manager from Tribeca Dental Studio.Connecting you to gemini</Say>
         <Connect>
           <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
         </Connect>
