@@ -27,16 +27,16 @@ export class GeminiService implements OnModuleInit {
       process.env.TWILIO_ACCOUNT_SID,
       process.env.TWILIO_AUTH_TOKEN,
     );
-
+    const credentialsGoogleCalendar = JSON.parse(process.env.GOOGLE_CREDS_JSON!)
     const auth = new google.auth.GoogleAuth({
-      keyFile: './google.json',
+      keyFile: credentialsGoogleCalendar,
       scopes: ['https://www.googleapis.com/auth/calendar'],
     });
     this.calendar = google.calendar({ version: 'v3', auth });
   }
 
   async onModuleInit() {
-    await this.makeOutboundCall('+19297696545'); // Test call on start
+    await this.makeOutboundCall('+19297696545');
     console.log('🚀 Fusion AI Backend Started.');
   }
 
