@@ -108,8 +108,12 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
               dgLive.send(new Uint8Array(audioBuffer) as any);
             }
             break;
-          case 'stop':
+         case 'stop':
             console.log('⏹️ Twilio sent stop event');
+            
+            // 1. Trigger the DB save before closing everything
+             this.geminiService.onCallDisconnect(); 
+            
             if (dgLive.getReadyState() === 1) dgLive.requestClose();
             break;
         }
@@ -123,6 +127,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
   handleDisconnect(twilioWs: WebSocket) {
     console.log('❌ Twilio disconnected');
+   this.geminiService.onCallDisconnect();
     const dgLive = (twilioWs as any).dgLive;
     if (dgLive && dgLive.getReadyState() === 1) {
       dgLive.requestClose();
