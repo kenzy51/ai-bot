@@ -27,16 +27,18 @@ export class GeminiService implements OnModuleInit {
       process.env.TWILIO_ACCOUNT_SID,
       process.env.TWILIO_AUTH_TOKEN,
     );
-    const credentialsGoogleCalendar = JSON.parse(process.env.GOOGLE_CREDS_JSON!)
+    const credentialsGoogleCalendar = JSON.parse(
+      process.env.GOOGLE_CREDS_JSON!,
+    );
     const auth = new google.auth.GoogleAuth({
-      keyFile: credentialsGoogleCalendar,
+      keyFile: './google.json',
       scopes: ['https://www.googleapis.com/auth/calendar'],
     });
     this.calendar = google.calendar({ version: 'v3', auth });
   }
 
   async onModuleInit() {
-    await this.makeOutboundCall('+19297696545');
+    // await this.makeOutboundCall('+19297696545');
     console.log('🚀 Fusion AI Backend Started.');
   }
 
@@ -87,6 +89,7 @@ export class GeminiService implements OnModuleInit {
     if (this.isProcessing) return '';
     this.isProcessing = true;
     this.chatHistory.push({ role: 'user', content: userText });
+    if (this.chatHistory.length > 10) this.chatHistory.shift();
     const now = new Date();
     // CRITICAL: Feed the AI the exact current moment so it can calculate "tomorrow" correctly
     const nyTime = now.toLocaleString('en-US', {
@@ -101,7 +104,7 @@ export class GeminiService implements OnModuleInit {
 
     try {
       const response = await this.groq.chat.completions.create({
-        model: 'llama-3.3-70b-versatile',
+        model: 'llama-3.1-8b-instant',
         messages: [
           {
             role: 'system',
@@ -208,7 +211,7 @@ CRITICAL RULES:
           let conversationSummary = 'No summary available.';
           try {
             const summaryResponse = await this.groq.chat.completions.create({
-              model: 'llama-3.3-70b-versatile',
+              model: 'llama-3-8b-8192',
               messages: [
                 {
                   role: 'system',
@@ -345,6 +348,8 @@ CRITICAL RULES:
     return 'Thank you for calling Tribeca Dental Studio. This is Kanat. Are you calling about our NightLase treatment today?';
   }
 }
+
+
 
 // // FUNNY TEST
 // import { Injectable, OnModuleInit } from '@nestjs/common';
