@@ -13,6 +13,8 @@ import { LiveTranscriptionEvents } from '@deepgram/sdk';
 })
 export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   private streamSid: string = '';
+  private isGreetingSent: boolean = false;
+  private isDeepgramReady: boolean = false;
 
   constructor(private readonly geminiService: GeminiService) {}
 
@@ -21,113 +23,108 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     const dgLive = this.geminiService.getDeepgramLive();
 
-    // 1. ПРИВЕТСТВИЕ: Срабатывает один раз при открытии соединения
-    dgLive.once(LiveTranscriptionEvents.Open, async () => {
-      console.log('✅ Deepgram Connection Opened');
-      try {
-        const greetingText = await this.geminiService.getInitialGreeting();
-        const audioBuffer = await this.geminiService.speak(greetingText);
-
-        twilioWs.send(
-          JSON.stringify({
-            event: 'media',
-            streamSid: this.streamSid,
-            media: { payload: audioBuffer.toString('base64') },
-          }),
-        );
-        console.log('👋 Megan sent initial greeting');
-      } catch (err) {
-        console.error('🔴 Error sending greeting:', err);
+    // Helper to send audio to Twilio
+    const sendAudioToTwilio = (base64Audio: string) => {
+      if (!this.streamSid) {
+        console.warn('⚠️ Cannot send audio: streamSid is missing');
+        return;
       }
+      twilioWs.send(
+        JSON.stringify({
+          event: 'media',
+          streamSid: this.streamSid,
+          media: { payload: base64Audio },
+        }),
+      );
+    };
+
+    // COORDINATION LOGIC: Greets only when both SID and DG are ready
+    const attemptGreeting = async () => {
+      if (this.isDeepgramReady && this.streamSid && !this.isGreetingSent) {
+        this.isGreetingSent = true; // Prevent double greeting
+        try {
+          console.log('✨ System Ready. Generating initial greeting...');
+          const greetingText = await this.geminiService.getInitialGreeting();
+          const audioBuffer = await this.geminiService.speak(greetingText);
+          sendAudioToTwilio(audioBuffer.toString('base64'));
+          console.log('👋 Jessica sent initial greeting');
+        } catch (err) {
+          console.error('🔴 Greeting Error:', err);
+        }
+      }
+    };
+
+    dgLive.on(LiveTranscriptionEvents.Open, () => {
+      console.log('✅ Deepgram Connection Opened');
+      this.isDeepgramReady = true;
+      attemptGreeting();
     });
 
-    // 2. ОБРАБОТКА РЕЧИ И ПРЕРЫВАНИЕ (BARGE-IN)
     dgLive.on(LiveTranscriptionEvents.Transcript, async (data) => {
       const transcript = data.channel.alternatives[0]?.transcript;
 
-      if (transcript && transcript.trim().length > 0) {
-        // --- ЛОГИКА ПРЕРЫВАНИЯ (BARGE-IN) ---
-        const interruptMessage = JSON.stringify({
+      if (transcript && transcript.trim().length > 2) {
+        // --- BARGE-IN (Interruption) ---
+        // Tells Twilio to stop playing current audio buffer because user is speaking
+        twilioWs.send(JSON.stringify({
           event: 'clear',
           streamSid: this.streamSid,
-        });
-        twilioWs.send(interruptMessage);
-        // ------------------------------------
+        }));
 
-        if (!data.is_final) {
-          console.log(`👤 Hearing (interim): ${transcript}`);
-          return;
-        }
+        if (!data.is_final) return;
 
-        console.log(`✅ Final phrase: ${transcript}`);
+        console.log(`👤 User: ${transcript}`);
 
         try {
-          // Получаем ответ от Майи
-          const aiResponse =
-            await this.geminiService.generateResponse(transcript);
-          console.log(`🤖 Megan says: ${aiResponse}`);
+          const aiResponse = await this.geminiService.generateResponse(transcript);
+          if (!aiResponse) return;
 
-          // Озвучиваем ответ
+          console.log(`🤖 Jessica: ${aiResponse}`);
           const audioBuffer = await this.geminiService.speak(aiResponse);
-
-          // Отправляем аудио в Twilio
-          twilioWs.send(
-            JSON.stringify({
-              event: 'media',
-              streamSid: this.streamSid,
-              media: { payload: audioBuffer.toString('base64') },
-            }),
-          );
+          sendAudioToTwilio(audioBuffer.toString('base64'));
         } catch (err) {
-          console.error('🔴 Error in AI flow:', err);
+          console.error('🔴 AI Flow Error:', err);
         }
       }
     });
 
-    // Ошибки и закрытие
-    dgLive.on(LiveTranscriptionEvents.Error, (err) => {
-      console.error('🔴 Deepgram Error:', err);
-    });
-
-    dgLive.on(LiveTranscriptionEvents.Close, () => {
-      console.log('🔌 Deepgram Connection Closed');
-    });
-
-    // 3. ПЕРЕДАЧА ПОТОКА ОТ TWILIO К DEEPGRAM
+    // Handle Twilio Messages
     twilioWs.on('message', (data: string) => {
       try {
         const msg = JSON.parse(data);
         switch (msg.event) {
           case 'start':
             this.streamSid = msg.start.streamSid;
-            console.log(`📞 Stream SID: ${this.streamSid}`);
+            console.log(`📞 Stream SID Captured: ${this.streamSid}`);
+            attemptGreeting(); // Check if DG is already open
             break;
+
           case 'media':
             if (dgLive.getReadyState() === 1) {
               const audioBuffer = Buffer.from(msg.media.payload, 'base64');
               dgLive.send(new Uint8Array(audioBuffer) as any);
             }
             break;
-         case 'stop':
-            console.log('⏹️ Twilio sent stop event');
-            
-            // 1. Trigger the DB save before closing everything
-             this.geminiService.onCallDisconnect(); 
-            
+
+          case 'stop':
+            console.log('⏹️ Call stopped by Twilio');
+            this.geminiService.onCallDisconnect();
             if (dgLive.getReadyState() === 1) dgLive.requestClose();
             break;
         }
       } catch (error) {
-        console.error('❌ Error processing Twilio message:', error);
+        console.error('❌ Twilio Message Parse Error:', error);
       }
     });
 
+    dgLive.on(LiveTranscriptionEvents.Error, (err) => console.error('🔴 DG Error:', err));
+    
     (twilioWs as any).dgLive = dgLive;
   }
 
   handleDisconnect(twilioWs: WebSocket) {
     console.log('❌ Twilio disconnected');
-   this.geminiService.onCallDisconnect();
+    this.geminiService.onCallDisconnect();
     const dgLive = (twilioWs as any).dgLive;
     if (dgLive && dgLive.getReadyState() === 1) {
       dgLive.requestClose();

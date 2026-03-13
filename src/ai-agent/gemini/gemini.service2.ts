@@ -1,3 +1,4 @@
+
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { DeepgramClient, createClient } from '@deepgram/sdk';
 import Groq from 'groq-sdk';
@@ -17,7 +18,7 @@ export class GeminiService implements OnModuleInit {
   private elevenlabs: ElevenLabsClient;
   private lastAction = '';
   private chatHistory: any[] = [];
-  private callStatus: string = 'inquiry';
+  private callStatus: string = 'inquiry'; // Track the overall call status
 
   constructor(private readonly callsService: CallsService) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
@@ -149,11 +150,12 @@ CRITICAL RULES:
           },
           ...this.chatHistory,
         ],
-        // stream:true,
+        stream:true,
         tools: this.getGroqTools() as any,
         tool_choice: 'auto',
         temperature: 0,
       });
+      // @ts-ignore
       const message = response.choices[0]?.message;
       let finalResponseText = message?.content || '';
       let currentStatus = 'inquiry'; // Default to inquiry for DB safety
@@ -309,67 +311,35 @@ CRITICAL RULES:
     });
   }
 
-  // async speak(text: string): Promise<Buffer> {
-  //   try {
-  //     const audioStream = await this.elevenlabs.textToSpeech.convert(
-  //       'PBZ6PhGMbBIzGFQBGF5u',
-  //       { text, model_id: 'eleven_turbo_v2', output_format: 'ulaw_8000' },
-  //     );
+  async speak(text: string): Promise<Buffer> {
+    try {
+      const audioStream = await this.elevenlabs.textToSpeech.convert(
+        'tMXujoAjiboschVOhAnk',
+        { text, model_id: 'eleven_turbo_v2', output_format: 'ulaw_8000' },
+      );
 
-  //     const chunks = [];
-  //     for await (const chunk of audioStream) {
-  //       // @ts-ignore
-  //       chunks.push(chunk);
-  //     }
-  //     return Buffer.concat(chunks);
-  //   } catch (error) {
-  //     console.error('❌ ElevenLabs Error:', error);
-  //     throw error;
-  //   }
-  // }
-async speak(text: string): Promise<Buffer> {
-  try {
-    const response = await fetch(
-      `https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000`,
-      {
-        method: 'POST',
-        headers: {
-          'xi-api-key': process.env.ELEVEN!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          text,
-          model_id: 'eleven_turbo_v2',
-        }),
+      const chunks = [];
+      for await (const chunk of audioStream) {
+        // @ts-ignore
+        chunks.push(chunk);
       }
-    );
-
-    if (!response.ok) throw new Error('ElevenLabs Fetch Failed');
-    
-    const arrayBuffer = await response.arrayBuffer();
-    return Buffer.from(arrayBuffer);
-  } catch (error) {
-    console.error('❌ TTS Failed, using silence fallback');
-    return Buffer.alloc(8000, 0); // Returns 1 second of "mu-law silence" to prevent crashes
+      return Buffer.concat(chunks);
+    } catch (error) {
+      console.error('❌ ElevenLabs Error:', error);
+      throw error;
+    }
   }
-}
+
   getDeepgramLive() {
     return this.deepgram.listen.live({
-      // model: 'nova-2-medical',
-      // language: 'en-US',
-      // encoding: 'mulaw',
-      // sample_rate: 8000,
-      // interim_results: true,
-      // endpointing: 800,
-      // smart_format: true,
-      // vad_events: true, // Use Voice Activity Detection to stop listening when no one is talking
-      model: 'nova-2', // Try switching from 'nova-2-medical' to 'nova-2' to test if it's a model-access issue
+      model: 'nova-2-medical',
       language: 'en-US',
       encoding: 'mulaw',
       sample_rate: 8000,
-      interim_results: false, // Set to false to reduce WebSocket traffic unless you specifically need real-time captions
-      endpointing: 300, // Faster endpointing for better response feel
+      interim_results: true,
+      endpointing: 800,
       smart_format: true,
+      vad_events: true, // Use Voice Activity Detection to stop listening when no one is talking
     });
   }
 
@@ -377,6 +347,9 @@ async speak(text: string): Promise<Buffer> {
     return 'Hello, This is Jessica. We Received your request in Nightlase Treatment today. How can i help you today?';
   }
 }
+
+
+
 
 // import { Injectable, OnModuleInit } from '@nestjs/common';
 // import { DeepgramClient, createClient } from '@deepgram/sdk';
@@ -720,6 +693,24 @@ async speak(text: string): Promise<Buffer> {
 //     return 'Hello. This is Jessica. You requested about our NightLase treatment today. How can i Help?';
 //   }
 // }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // // FUNNY TEST
 // import { Injectable, OnModuleInit } from '@nestjs/common';

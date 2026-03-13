@@ -7,10 +7,15 @@ import { CallsModule } from './calls/calls.module';
 import { ConfigModule } from '@nestjs/config';
 import { config } from 'dotenv';
 import { MongooseModule } from '@nestjs/mongoose';
-
 @Module({
-  imports: [AiAgentModule, CallsModule, ConfigModule.forRoot(),
-    MongooseModule.forRoot(process.env.MONGODB_URI!)
+  imports: [
+    AiAgentModule,
+    CallsModule,
+    ConfigModule.forRoot(),
+    MongooseModule.forRoot(process.env.MONGODB_URI!, {
+      family: 4, // Forces IPv4 to bypass hotspot/IPv6 issues
+      serverSelectionTimeoutMS: 5000, // Faster failure feedback
+    }),
   ],
   controllers: [AppController, LeadsController],
   providers: [AppService],
