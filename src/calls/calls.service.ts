@@ -13,7 +13,22 @@ export class CallsService {
     return record.save();
   }
 
-  // 2. Fetch calls for your Next.js Dashboard
+  async updateCall(
+    callSid: string,
+    updateData: Partial<Call>,
+  ): Promise<Call | null> {
+    return await this.callModel
+      .findOneAndUpdate({ callSid }, { $set: updateData }, { new: true })
+      .exec();
+  }
+
+  async updateCallRecording(callSid: string, recordingUrl: string) {
+    return await this.callModel.findOneAndUpdate(
+      { callSid: callSid },
+      { $set: { recordingUrl: recordingUrl } },
+      { new: true },
+    );
+  }
   async getHistoryByBusiness(businessId: string): Promise<Call[]> {
     return this.callModel
       .find({ businessId })

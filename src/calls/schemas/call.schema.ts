@@ -19,10 +19,28 @@ export class Call extends Document {
   transcript: string; // The full text of the conversation
 
   @Prop({ enum: ['booked', 'inquiry', 'missed', 'forwarded'] })
-  status: string; // Tells the CEO if Megan made money or just answered questions
+  status: string; 
 
   @Prop()
-  procedure: string; // e.g., "NightLase", "Cleaning"
+  procedure: string;
+
+  @Prop({ index: true })
+  callSid: string;
+
+  @Prop()
+  recordingUrl: string; // The URL to the stored recording
+
+  @Prop()
+  callDuration: number; // Seconds (e.g., 120). Tells you how long the AI keeps people engaged.
+
+  @Prop({ type: Object })
+  metadata: {
+    latency: number; 
+    modelUsed: string; 
+  };
+
+  @Prop({ default: false })
+  isFlagged: boolean; 
 }
 
 export const CallSchema = SchemaFactory.createForClass(Call);

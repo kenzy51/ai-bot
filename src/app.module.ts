@@ -7,6 +7,7 @@ import { CallsModule } from './calls/calls.module';
 import { ConfigModule } from '@nestjs/config';
 import { config } from 'dotenv';
 import { MongooseModule } from '@nestjs/mongoose';
+import { CallsController } from './calls/calls.controller';
 @Module({
   imports: [
     AiAgentModule,
@@ -17,7 +18,7 @@ import { MongooseModule } from '@nestjs/mongoose';
       serverSelectionTimeoutMS: 5000, // Faster failure feedback
     }),
   ],
-  controllers: [AppController, LeadsController],
+  controllers: [AppController],
   providers: [AppService],
 })
 export class AppModule {}
