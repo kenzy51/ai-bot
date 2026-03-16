@@ -11,6 +11,7 @@ const common_1 = require("@nestjs/common");
 const app_controller_1 = require("./app.controller");
 const app_service_1 = require("./app.service");
 const ai_agent_module_1 = require("./ai-agent/ai-agent.module");
+const leads_controller_1 = require("./leads/leads.controller");
 const calls_module_1 = require("./calls/calls.module");
 const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
@@ -28,7 +29,7 @@ exports.AppModule = AppModule = __decorate([
                 serverSelectionTimeoutMS: 5000,
             }),
         ],
-        controllers: [app_controller_1.AppController],
+        controllers: [app_controller_1.AppController, leads_controller_1.LeadsController],
         providers: [app_service_1.AppService],
     })
 ], AppModule);
