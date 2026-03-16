@@ -170,12 +170,10 @@ CRITICAL RULES:
           },
           ...this.chatHistory,
         ],
-        stream:true,
         tools: this.getGroqTools() as any,
         tool_choice: 'auto',
         temperature: 0,
       });
-      // @ts-ignore
       const message = response.choices[0]?.message;
       let finalResponseText = message?.content || '';
       let currentStatus = 'inquiry'; // Default to inquiry for DB safety
@@ -384,7 +382,7 @@ CRITICAL RULES:
   async speak(text: string): Promise<Buffer> {
     try {
       const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/CaJGGnGTRWSly2yoC75U/stream?output_format=ulaw_8000`,
+        `https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000`,
         {
           method: 'POST',
           headers: {

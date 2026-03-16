@@ -1,9 +1,11 @@
 /* eslint-disable prettier/prettier */
 import { Controller, Post, Body, Header } from '@nestjs/common';
+import { CallsService } from 'src/calls/calls.service';
 import twilio = require('twilio');
 @Controller('leads')
 export class LeadsController {
   private client: twilio.Twilio;
+  callsService: CallsService;
   constructor() {
     // Инициализируем в конструкторе, чтобы убедиться, что переменные окружения подтянуты
     this.client = twilio(
@@ -18,12 +20,27 @@ export class LeadsController {
     return `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Connect>
-        <Stream url="wss://${process.env.SERVER_URL}/media-stream" record="true"/>
+        <Stream 
+        url="wss://${process.env.SERVER_URL}/media-stream" 
+        record="true" 
+        recordingStatusCallback="${process.env.SERVER_URL}/leads/recording-callback"
+        recordingStatusCallbackMethod="POST"/>
       </Connect>
     </Response>`;
   }
 
+  @Post('recording-callback')
+  async handleRecordingCallback(@Body() body: any) {
+    const { RecordingUrl, RecordingSid, CallSid, RecordingDuration } = body;
 
+    console.log(`Recording finished for Call ${CallSid}`);
+    console.log(`Download link: ${RecordingUrl}`);
+
+    // TODO: Save this to your database (MongoDB/Postgres)
+    await this.callsService.updateCallRecording(CallSid, RecordingUrl);
+
+    return { status: 'received' };
+  }
   //   @Post('new-lead')
   //   async handleNewLead(@Body() leadData: { phone: string; name: string; clinicName: string }) {
   //     console.log(`New lead received: ${leadData.name} for ${leadData.clinicName}`);

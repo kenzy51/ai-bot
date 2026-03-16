@@ -169,7 +169,6 @@ CRITICAL RULES:
                     },
                     ...this.chatHistory,
                 ],
-                stream: true,
                 tools: this.getGroqTools(),
                 tool_choice: 'auto',
                 temperature: 0,
@@ -327,7 +326,7 @@ CRITICAL RULES:
     }
     async speak(text) {
         try {
-            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/CaJGGnGTRWSly2yoC75U/stream?output_format=ulaw_8000`, {
+            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000`, {
                 method: 'POST',
                 headers: {
                     'xi-api-key': process.env.ELEVEN,
