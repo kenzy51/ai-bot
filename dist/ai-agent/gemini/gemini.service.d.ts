@@ -1,29 +1,11 @@
-import { OnModuleInit } from '@nestjs/common';
-import { CallsService } from 'src/calls/calls.service';
-export declare class GeminiService implements OnModuleInit {
-    private readonly callsService;
+import WebSocket = require('ws');
+export declare class GeminiService {
     private deepgram;
     private groq;
-    private calendar;
-    private twilioClient;
-    private isProcessing;
-    private elevenlabs;
-    private lastAction;
-    private chatHistory;
-    private callStatus;
-    private isLogging;
-    private currentCallSid;
-    constructor(callsService: CallsService);
-    onModuleInit(): Promise<void>;
-    makeOutboundCall(to: string): Promise<void>;
-    private getGroqTools;
-    generateResponse(userText: string, history: any[]): Promise<any>;
-    transferCall(sid: string): Promise<void>;
-    onCallDisconnect(): Promise<void>;
-    private logToDatabase;
-    private handleNotifications;
-    private createCalendarEvent;
-    speak(text: string): Promise<Buffer>;
-    getDeepgramLive(): import("@deepgram/sdk").ListenLiveClient;
+    private ttsSockets;
+    generateResponse(userText: string, history: any[], twilioWs: WebSocket, streamSid: string): Promise<string>;
+    streamTts(text: string, streamSid: string, twilioWs: WebSocket): Promise<void>;
     getInitialGreeting(): Promise<string>;
+    getDeepgramLive(): import("@deepgram/sdk").ListenLiveClient;
+    cleanup(streamSid: string): void;
 }

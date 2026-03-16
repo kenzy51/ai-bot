@@ -150,7 +150,129 @@
 //     }
 //   }
 // }
-import { WebSocketGateway, OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
+
+// import {
+//   WebSocketGateway,
+//   OnGatewayConnection,
+//   OnGatewayDisconnect,
+// } from '@nestjs/websockets';
+// import { GeminiService } from '../gemini/gemini.service';
+// import * as WebSocket from 'ws';
+// import { LiveTranscriptionEvents } from '@deepgram/sdk';
+
+// @WebSocketGateway({ path: '/media-stream' })
+// export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
+//   constructor(private readonly geminiService: GeminiService) {}
+
+//   // Track active streamSids for cleanup
+//   private connectionMap = new Map<WebSocket, string>();
+//   // Lock to prevent concurrent AI processing for a specific stream
+//   private isProcessingMap = new Map<string, boolean>();
+
+//   handleConnection(twilioWs: WebSocket) {
+//     console.log('🚀 Twilio connected.');
+
+//     let chatHistory: any[] = [];
+//     let streamSid: string = '';
+//     const dgLive = this.geminiService.getDeepgramLive();
+//     // @ts-ignore
+//     dgLive.on(LiveTranscriptionEvents.Warning, (warn) =>
+//       console.warn('⚠️ DG Warning:', warn),
+//     );
+//     // Add this to see if the AI even hears silence
+//     dgLive.on('speech_started', () => console.log('🎤 User started speaking'));
+//     dgLive.on(LiveTranscriptionEvents.Transcript, async (data) => {
+//       const transcript = data.channel.alternatives[0]?.transcript;
+
+//       // Ignore interim results or empty input
+//       if (!data.is_final || !transcript || transcript.trim().length < 3) return;
+
+//       // If already processing for this SID, skip
+//       if (this.isProcessingMap.get(streamSid)) return;
+
+//       console.log(`👤 User: ${transcript}`);
+//       this.isProcessingMap.set(streamSid, true);
+
+//       // 1. Interrupt (Barge-in)
+//       twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
+
+//       // 2. Add user input to local state
+//       chatHistory.push({ role: 'user', content: transcript });
+
+//       try {
+//         // 3. Generate response (geminiService.generateResponse handles audio streaming)
+//         const aiResponse = await this.geminiService.generateResponse(
+//           transcript,
+//           chatHistory,
+//           twilioWs,
+//           streamSid,
+//         );
+
+//         if (aiResponse) {
+//           chatHistory.push({ role: 'assistant', content: aiResponse });
+//           console.log(`🤖 Jessica: ${aiResponse}`);
+//         }
+//       } catch (err) {
+//         console.error('🔴 Gateway AI Error:', err);
+//       } finally {
+//         this.isProcessingMap.set(streamSid, false);
+//       }
+//     });
+
+//     twilioWs.on('message', async (data: string) => {
+//       const msg = JSON.parse(data);
+
+//       if (msg.event === 'start') {
+//         streamSid = msg.start.streamSid;
+//         this.connectionMap.set(twilioWs, streamSid);
+//         console.log(`✅ Stream started: ${streamSid}`);
+
+//         // Greeting only happens ONCE upon start event
+//         const greeting = await this.geminiService.getInitialGreeting();
+//         await this.geminiService.streamTts(greeting, streamSid, twilioWs);
+//         chatHistory.push({ role: 'assistant', content: greeting });
+//       }
+
+//       if (msg.event === 'media' && dgLive.getReadyState() === 1) {
+//         const audioBuffer = Buffer.from(msg.media.payload, 'base64');
+//         // @ts-ignore
+//         dgLive.send(new Uint8Array(audioBuffer));
+//       } else if (msg.event === 'media' && dgLive.getReadyState() !== 1) {
+//         // If it's not ready, try to re-init
+//         console.warn(
+//           '⚠️ Deepgram not ready (State: ' +
+//             dgLive.getReadyState() +
+//             '). Attempting to skip audio.',
+//         );
+//       }
+
+//       if (msg.event === 'stop') {
+//         this.cleanup(twilioWs);
+//       }
+//     });
+//   }
+
+//   private cleanup(twilioWs: WebSocket) {
+//     const streamSid = this.connectionMap.get(twilioWs);
+//     if (streamSid) {
+//       this.geminiService.cleanup(streamSid);
+//       this.connectionMap.delete(twilioWs);
+//       this.isProcessingMap.delete(streamSid);
+//     }
+//   }
+
+//   handleDisconnect(twilioWs: WebSocket) {
+//     console.log('❌ Call ended');
+//     this.cleanup(twilioWs);
+//     this.geminiService.onCallDisconnect();
+//   }
+// }
+
+import {
+  WebSocketGateway,
+  OnGatewayConnection,
+  OnGatewayDisconnect,
+} from '@nestjs/websockets';
 import { GeminiService } from '../gemini/gemini.service';
 import * as WebSocket from 'ws';
 import { LiveTranscriptionEvents } from '@deepgram/sdk';
@@ -159,67 +281,71 @@ import { LiveTranscriptionEvents } from '@deepgram/sdk';
 export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly geminiService: GeminiService) {}
 
+  private isProcessingMap = new Map<string, boolean>();
+
   handleConnection(twilioWs: WebSocket) {
-    console.log('🚀 Twilio connected. Initializing fresh session.');
-    
-    // UNIQUE STATE: This history exists only for this one caller
-    let chatHistory: any[] = [];
     let streamSid: string = '';
+    let chatHistory: any[] = [];
+    let isDgReady = false;
+
     const dgLive = this.geminiService.getDeepgramLive();
-
-    const sendAudioToTwilio = (base64Audio: string) => {
-      if (!streamSid) return;
-      twilioWs.send(JSON.stringify({
-        event: 'media',
-        streamSid,
-        media: { payload: base64Audio },
-      }));
-    };
-
+    console.log('🔗 Attempting to connect to Deepgram...');
     dgLive.on(LiveTranscriptionEvents.Open, async () => {
-      console.log('✅ Deepgram Ready');
-      // Send initial greeting immediately
-      const greeting = await this.geminiService.getInitialGreeting();
-      chatHistory.push({ role: 'assistant', content: greeting });
-      const audio = await this.geminiService.speak(greeting);
-      sendAudioToTwilio(audio.toString('base64'));
+      isDgReady = true;
+      console.log('✅ Deepgram Ready, sending greeting...');
+    
     });
-
+    dgLive.on(LiveTranscriptionEvents.Error, (err) => {
+      console.error('❌ Deepgram Error:', err);
+    });
     dgLive.on(LiveTranscriptionEvents.Transcript, async (data) => {
       const transcript = data.channel.alternatives[0]?.transcript;
       if (!data.is_final || !transcript || transcript.trim().length < 3) return;
-
-      console.log(`👤 User: ${transcript}`);
-      
-      // 1. Interrupt (Barge-in)
+      if (this.isProcessingMap.get(streamSid)) return;
+      isDgReady = true;
+      this.isProcessingMap.set(streamSid, true);
       twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
-
-      // 2. Add user input to local state
       chatHistory.push({ role: 'user', content: transcript });
 
-      // 3. Generate response using passed-in history
-      const aiResponse = await this.geminiService.generateResponse(transcript, chatHistory);
-      
-      if (aiResponse) {
-        chatHistory.push({ role: 'assistant', content: aiResponse });
-        console.log(`🤖 Jessica: ${aiResponse}`);
-        const audio = await this.geminiService.speak(aiResponse);
-        sendAudioToTwilio(audio.toString('base64'));
+      try {
+        const aiResponse = await this.geminiService.generateResponse(
+          transcript,
+          chatHistory,
+          twilioWs,
+          streamSid,
+        );
+        if (aiResponse)
+          chatHistory.push({ role: 'assistant', content: aiResponse });
+      } finally {
+        this.isProcessingMap.set(streamSid, false);
       }
     });
 
-    twilioWs.on('message', (data: string) => {
-      const msg = JSON.parse(data);
-      if (msg.event === 'start') streamSid = msg.start.streamSid;
-      if (msg.event === 'media' && dgLive.getReadyState() === 1) {
-        // @ts-ignore
-        dgLive.send(Buffer.from(msg.media.payload, 'base64'));
-      }
-      if (msg.event === 'stop') dgLive.requestClose();
-    });
+  // --- INSIDE VoiceGateway.ts ---
+
+twilioWs.on('message', async (data: string) => {
+  const msg = JSON.parse(data);
+  
+  if (msg.event === 'start') {
+    streamSid = msg.start.streamSid;
+    
+    // Only greet once here.
+    const greeting = await this.geminiService.getInitialGreeting();
+    await this.geminiService.streamTts(greeting, streamSid, twilioWs);
+    chatHistory.push({ role: 'assistant', content: greeting });
   }
 
-  handleDisconnect() {
-    console.log('❌ Call ended');
+  if (msg.event === 'media') {
+    // Only send to DG if it is actually in the OPEN state
+    if (dgLive.getReadyState() === 1) { 
+      // @ts-ignore
+      dgLive.send(Buffer.from(msg.media.payload, 'base64'));
+    }
+  }
+});
+  }
+
+  handleDisconnect(twilioWs: WebSocket) {
+    // this.geminiService.onCallDisconnect();
   }
 }

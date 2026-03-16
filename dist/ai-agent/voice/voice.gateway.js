@@ -18,55 +18,55 @@ let VoiceGateway = class VoiceGateway {
     constructor(geminiService) {
         this.geminiService = geminiService;
     }
+    isProcessingMap = new Map();
     handleConnection(twilioWs) {
-        console.log('🚀 Twilio connected. Initializing fresh session.');
-        let chatHistory = [];
         let streamSid = '';
+        let chatHistory = [];
+        let isDgReady = false;
         const dgLive = this.geminiService.getDeepgramLive();
-        const sendAudioToTwilio = (base64Audio) => {
-            if (!streamSid)
-                return;
-            twilioWs.send(JSON.stringify({
-                event: 'media',
-                streamSid,
-                media: { payload: base64Audio },
-            }));
-        };
+        console.log('🔗 Attempting to connect to Deepgram...');
         dgLive.on(sdk_1.LiveTranscriptionEvents.Open, async () => {
-            console.log('✅ Deepgram Ready');
-            const greeting = await this.geminiService.getInitialGreeting();
-            chatHistory.push({ role: 'assistant', content: greeting });
-            const audio = await this.geminiService.speak(greeting);
-            sendAudioToTwilio(audio.toString('base64'));
+            isDgReady = true;
+            console.log('✅ Deepgram Ready, sending greeting...');
+        });
+        dgLive.on(sdk_1.LiveTranscriptionEvents.Error, (err) => {
+            console.error('❌ Deepgram Error:', err);
         });
         dgLive.on(sdk_1.LiveTranscriptionEvents.Transcript, async (data) => {
             const transcript = data.channel.alternatives[0]?.transcript;
             if (!data.is_final || !transcript || transcript.trim().length < 3)
                 return;
-            console.log(`👤 User: ${transcript}`);
+            if (this.isProcessingMap.get(streamSid))
+                return;
+            isDgReady = true;
+            this.isProcessingMap.set(streamSid, true);
             twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
             chatHistory.push({ role: 'user', content: transcript });
-            const aiResponse = await this.geminiService.generateResponse(transcript, chatHistory);
-            if (aiResponse) {
-                chatHistory.push({ role: 'assistant', content: aiResponse });
-                console.log(`🤖 Jessica: ${aiResponse}`);
-                const audio = await this.geminiService.speak(aiResponse);
-                sendAudioToTwilio(audio.toString('base64'));
+            try {
+                const aiResponse = await this.geminiService.generateResponse(transcript, chatHistory, twilioWs, streamSid);
+                if (aiResponse)
+                    chatHistory.push({ role: 'assistant', content: aiResponse });
+            }
+            finally {
+                this.isProcessingMap.set(streamSid, false);
             }
         });
-        twilioWs.on('message', (data) => {
+        twilioWs.on('message', async (data) => {
             const msg = JSON.parse(data);
-            if (msg.event === 'start')
+            if (msg.event === 'start') {
                 streamSid = msg.start.streamSid;
-            if (msg.event === 'media' && dgLive.getReadyState() === 1) {
-                dgLive.send(Buffer.from(msg.media.payload, 'base64'));
+                const greeting = await this.geminiService.getInitialGreeting();
+                await this.geminiService.streamTts(greeting, streamSid, twilioWs);
+                chatHistory.push({ role: 'assistant', content: greeting });
             }
-            if (msg.event === 'stop')
-                dgLive.requestClose();
+            if (msg.event === 'media') {
+                if (dgLive.getReadyState() === 1) {
+                    dgLive.send(Buffer.from(msg.media.payload, 'base64'));
+                }
+            }
         });
     }
-    handleDisconnect() {
-        console.log('❌ Call ended');
+    handleDisconnect(twilioWs) {
     }
 };
 exports.VoiceGateway = VoiceGateway;
