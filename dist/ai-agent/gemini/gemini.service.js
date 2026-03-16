@@ -111,6 +111,7 @@ let GeminiService = class GeminiService {
         this.chatHistory.push({ role: 'user', content: userText });
         if (this.chatHistory.length > 12)
             this.chatHistory.shift();
+        const leanHistory = this.chatHistory.slice(-6);
         const now = new Date();
         const nyTime = now.toLocaleString('en-US', {
             timeZone: 'America/New_York',
@@ -167,7 +168,7 @@ CRITICAL RULES:
 - Keep responses under 15 words.
             KNOWLEDGE: ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                     },
-                    ...this.chatHistory,
+                    ...leanHistory,
                 ],
                 tools: this.getGroqTools(),
                 tool_choice: 'auto',

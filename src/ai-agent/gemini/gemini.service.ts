@@ -109,7 +109,7 @@ export class GeminiService implements OnModuleInit {
     // 1. Manage Chat History - Keep it lean to save tokens and improve AI focus
     this.chatHistory.push({ role: 'user', content: userText });
     if (this.chatHistory.length > 12) this.chatHistory.shift();
-
+    const leanHistory = this.chatHistory.slice(-6);
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
       timeZone: 'America/New_York',
@@ -168,7 +168,7 @@ CRITICAL RULES:
 - Keep responses under 15 words.
             KNOWLEDGE: ${CLINIC_KNOWLEDGE}`,
           },
-          ...this.chatHistory,
+          ...leanHistory,
         ],
         tools: this.getGroqTools() as any,
         tool_choice: 'auto',
@@ -178,6 +178,8 @@ CRITICAL RULES:
       let finalResponseText = message?.content || '';
       let currentStatus = 'inquiry'; // Default to inquiry for DB safety
 
+
+   
       //
       // --- TOOL CALLING LOGIC ---
       if (message?.tool_calls && message.tool_calls.length > 0) {
@@ -311,7 +313,7 @@ CRITICAL RULES:
         transcript: this.chatHistory
           .map((h) => `${h.role}: ${h.content}`)
           .join('\n'),
-        status: status, 
+        status: status,
         procedure: 'NightLase',
       });
       console.log(`✅ DB Updated: ${status}`);
@@ -379,10 +381,11 @@ CRITICAL RULES:
   //     throw error;
   //   }
   // }
+
   async speak(text: string): Promise<Buffer> {
     try {
       const response = await fetch(
-`https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000&optimize_streaming_latency=3`,
+        `https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000&optimize_streaming_latency=3`,
         {
           method: 'POST',
           headers: {
@@ -410,6 +413,7 @@ CRITICAL RULES:
       return Buffer.alloc(8000, 0); // Returns 1 second of "mu-law silence" to prevent crashes
     }
   }
+  //
   getDeepgramLive() {
     return this.deepgram.listen.live({
       // model: 'nova-2-medical',
