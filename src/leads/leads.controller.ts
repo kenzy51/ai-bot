@@ -4,7 +4,6 @@ import twilio = require('twilio');
 @Controller('leads')
 export class LeadsController {
   private client: twilio.Twilio;
-
   constructor() {
     // Инициализируем в конструкторе, чтобы убедиться, что переменные окружения подтянуты
     this.client = twilio(
@@ -12,6 +11,18 @@ export class LeadsController {
       process.env.TWILIO_AUTH_TOKEN,
     );
   }
+  /* eslint-disable prettier/prettier */
+  @Post('incoming-call')
+  @Header('Content-Type', 'text/xml')
+  handleIncomingCall() {
+    return `<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+      <Connect>
+        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
+      </Connect>
+    </Response>`;
+  }
+
 
   //   @Post('new-lead')
   //   async handleNewLead(@Body() leadData: { phone: string; name: string; clinicName: string }) {
@@ -37,16 +48,4 @@ export class LeadsController {
   //       return { success: false, error: error.message };
   //     }
   //   }
-
-  /* eslint-disable prettier/prettier */
-  @Post('incoming-call')
-  @Header('Content-Type', 'text/xml')
-  handleIncomingCall() {
-    return `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Connect>
-        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
-      </Connect>
-    </Response>`;
-  }
 }

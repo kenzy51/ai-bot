@@ -18,7 +18,7 @@ import { CallsController } from './calls/calls.controller';
       serverSelectionTimeoutMS: 5000, // Faster failure feedback
     }),
   ],
-  controllers: [AppController],
+  controllers: [AppController, LeadsController],
   providers: [AppService],
 })
 export class AppModule {}
