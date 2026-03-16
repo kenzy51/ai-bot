@@ -382,7 +382,7 @@ CRITICAL RULES:
   async speak(text: string): Promise<Buffer> {
     try {
       const response = await fetch(
-        `https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000`,
+`https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000&optimize_streaming_latency=3`,
         {
           method: 'POST',
           headers: {
@@ -391,7 +391,7 @@ CRITICAL RULES:
           },
           body: JSON.stringify({
             text,
-            model_id: 'eleven_turbo_v2',
+            model_id: 'eleven_flash_v2_5',
             voice_settings: {
               stability: 0.2, // LOWER stability = more emotional/faster variation
               similarity_boost: 0.75,

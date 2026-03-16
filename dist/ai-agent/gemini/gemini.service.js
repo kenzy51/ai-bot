@@ -326,7 +326,7 @@ CRITICAL RULES:
     }
     async speak(text) {
         try {
-            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000`, {
+            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000&optimize_streaming_latency=3`, {
                 method: 'POST',
                 headers: {
                     'xi-api-key': process.env.ELEVEN,
@@ -334,7 +334,7 @@ CRITICAL RULES:
                 },
                 body: JSON.stringify({
                     text,
-                    model_id: 'eleven_turbo_v2',
+                    model_id: 'eleven_flash_v2_5',
                     voice_settings: {
                         stability: 0.2,
                         similarity_boost: 0.75,
