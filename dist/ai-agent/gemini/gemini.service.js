@@ -103,10 +103,11 @@ let GeminiService = class GeminiService {
             },
         ];
     }
-    async generateResponse(userText) {
+    async generateResponse(userText, history) {
         if (this.isProcessing)
             return '';
         this.isProcessing = true;
+        const messages = [...history, { role: 'user', content: userText }];
         this.chatHistory.push({ role: 'user', content: userText });
         if (this.chatHistory.length > 12)
             this.chatHistory.shift();
@@ -129,7 +130,9 @@ let GeminiService = class GeminiService {
                         content: `You are Jessica, a specialist at Tribeca Dental Studio. 
         CURRENT TIME: ${nyTime}. 
             CRITICAL: If the user says something that does NOT contain a time or day, 
+
           DO NOT use the book_appointment tool. Answer the question instead.
+          You are the voice agent. You have already greeted the user once. If the user says 'Hello' again, DO NOT repeat the full greeting. Simply say: 'Hi there, how can I help you with NightLase today?'
             CONTEXT: The user is calling specifically about NightLase treatment. 
 If they ask about "cost" or "how much", ALWAYS refer to the NightLase pricing in the knowledge base ($49 for evaluation). If they also ask what does it do, explain:
 WHAT IT IS: A non-invasive, patient-friendly laser treatment for increasing the quality of a patient's sleep.
