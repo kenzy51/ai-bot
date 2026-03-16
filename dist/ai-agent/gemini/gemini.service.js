@@ -169,6 +169,7 @@ CRITICAL RULES:
                     },
                     ...this.chatHistory,
                 ],
+                stream: true,
                 tools: this.getGroqTools(),
                 tool_choice: 'auto',
                 temperature: 0,
@@ -336,7 +337,7 @@ CRITICAL RULES:
                     text,
                     model_id: 'eleven_turbo_v2',
                     voice_settings: {
-                        stability: 0.3,
+                        stability: 0.2,
                         similarity_boost: 0.75,
                         speed_boost: true,
                     },

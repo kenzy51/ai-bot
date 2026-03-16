@@ -21,7 +21,7 @@ let LeadsController = class LeadsController {
         return `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Connect>
-        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
+        <Stream url="wss://${process.env.SERVER_URL}/media-stream" record="true"/>
       </Connect>
     </Response>`;
     }

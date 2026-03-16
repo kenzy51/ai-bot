@@ -170,11 +170,12 @@ CRITICAL RULES:
           },
           ...this.chatHistory,
         ],
-        // stream:true,
+        stream:true,
         tools: this.getGroqTools() as any,
         tool_choice: 'auto',
         temperature: 0,
       });
+      // @ts-ignore
       const message = response.choices[0]?.message;
       let finalResponseText = message?.content || '';
       let currentStatus = 'inquiry'; // Default to inquiry for DB safety
@@ -394,7 +395,7 @@ CRITICAL RULES:
             text,
             model_id: 'eleven_turbo_v2',
             voice_settings: {
-              stability: 0.3, // LOWER stability = more emotional/faster variation
+              stability: 0.2, // LOWER stability = more emotional/faster variation
               similarity_boost: 0.75,
               speed_boost: true, // ADD THIS to enable the native speed multiplier
             },
