@@ -44,22 +44,15 @@ const platform_ws_1 = require("@nestjs/platform-ws");
 const promises_1 = __importDefault(require("node:dns/promises"));
 promises_1.default.setServers(['8.8.8.8', '8.8.4.4']);
 async function bootstrap() {
-    console.log(process.memoryUsage());
-    console.log('Initial Memory:', process.memoryUsage().rss / 1024 / 1024, 'MB');
-    const app = await core_1.NestFactory.create(app_module_1.AppModule);
-    setInterval(() => {
-        const mem = process.memoryUsage();
-        const format = (bytes) => (bytes / 1024 / 1024).toFixed(2) + ' MB';
-        console.log(`--- Memory Usage ---`);
-        console.log(`RSS (Total): ${format(mem.rss)}`);
-        console.log(`Heap Total:  ${format(mem.heapTotal)}`);
-        console.log(`Heap Used:   ${format(mem.heapUsed)}`);
-        console.log(`External:    ${format(mem.external)}`);
-    }, 10000);
-    console.log('Post-Init Memory:', process.memoryUsage().rss / 1024 / 1024, 'MB');
+    const app = await core_1.NestFactory.create(app_module_1.AppModule, {
+        logger: ['error', 'warn', 'log'],
+    });
     app.enableCors();
     app.useWebSocketAdapter(new platform_ws_1.WsAdapter(app));
     await app.listen(3003);
+    console.log('🚀 Server running on port 3003');
 }
-bootstrap();
+bootstrap().catch(err => {
+    console.error('Fatal Error during bootstrap:', err);
+});
 //# sourceMappingURL=main.js.map

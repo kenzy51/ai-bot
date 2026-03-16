@@ -311,7 +311,7 @@ CRITICAL RULES:
         transcript: this.chatHistory
           .map((h) => `${h.role}: ${h.content}`)
           .join('\n'),
-        status: status, // Correctly uses 'booked' or 'inquiry'
+        status: status, 
         procedure: 'NightLase',
       });
       console.log(`✅ DB Updated: ${status}`);
