@@ -1,6 +1,6 @@
 import { OnModuleInit } from '@nestjs/common';
 import { CallsService } from 'src/calls/calls.service';
-export declare class GeminiService implements OnModuleInit {
+export declare class GeminiService2 implements OnModuleInit {
     private readonly callsService;
     private deepgram;
     private groq;
@@ -11,11 +11,14 @@ export declare class GeminiService implements OnModuleInit {
     private lastAction;
     private chatHistory;
     private callStatus;
+    private isLogging;
+    private currentCallSid;
     constructor(callsService: CallsService);
     onModuleInit(): Promise<void>;
     makeOutboundCall(to: string): Promise<void>;
     private getGroqTools;
-    generateResponse(userText: string): Promise<any>;
+    generateResponse(userText: string, history: any[], onAudioData: (buffer: Buffer) => void): Promise<string>;
+    transferCall(sid: string): Promise<void>;
     onCallDisconnect(): Promise<void>;
     private logToDatabase;
     private handleNotifications;

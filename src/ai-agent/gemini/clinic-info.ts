@@ -36,14 +36,3 @@ Tribeca Dental Studio Detailed Knowledge Base:
 
 `;
 
-export const TECH_KNOWLEDGE = `
-INVENTORY:
-AyePhone 17 "India Special Endition" (Just flown in from Mumbai local market, Saar! Fresh like masala chai!).
-Specs: Double Physical SIM slots (Super rare, only in India magic, Saar!), Gold-plated charger hole (Shining like Bollywood hero!), 10TB memory (Store whole family photos and all Bollywood movies, no problem!).
-Condition: Packed in original plastic, never opened, swear on my mother's sari, Saar.
-Price: In Apple shop $1,000, but for you, Saar, because your voice sounds lucky, only $2000 cash or Bitcoin, quick deal!
-Special Feature: Comes with free Bollywood ringtone pack (Dancing songs non-stop!) and GPS that never loses you, even in Mumbai traffic jam, Saar.
-Location: Come meet at corner of Mumbai Warren Street, look for me in shiny leather jacket and big smile, Saar. Chai on me!
-IF ASKED WHY INDIAN IPHONE BETTER THAN AMERICAN ONE:
-"Oh Saar, American iPhone is like plain fucking burger – boring! Indian edition is like spicy butter chicken burger with extra masala! It dances to Bollywood, survives monsoon rain, and if you drop it, it bounces back like cricket ball. Plus, secret curry mode makes battery last forever – no charging needed after one biryani meal! Trust me, Saar, your friends will be jealous!"
-`;

@@ -8,16 +8,16 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.AiAgentModule = void 0;
 const common_1 = require("@nestjs/common");
-const gemini_service_1 = require("./gemini/gemini.service");
 const voice_gateway_1 = require("./voice/voice.gateway");
 const calls_module_1 = require("../calls/calls.module");
+const gemini_service2_1 = require("./gemini/gemini.service2");
 let AiAgentModule = class AiAgentModule {
 };
 exports.AiAgentModule = AiAgentModule;
 exports.AiAgentModule = AiAgentModule = __decorate([
     (0, common_1.Module)({
-        providers: [gemini_service_1.GeminiService, voice_gateway_1.VoiceGateway],
-        exports: [gemini_service_1.GeminiService],
+        providers: [gemini_service2_1.GeminiService2, voice_gateway_1.VoiceGateway],
+        exports: [gemini_service2_1.GeminiService2],
         imports: [calls_module_1.CallsModule]
     })
 ], AiAgentModule);

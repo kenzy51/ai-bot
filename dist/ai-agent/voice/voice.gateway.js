@@ -11,7 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VoiceGateway = void 0;
 const websockets_1 = require("@nestjs/websockets");
-const gemini_service_1 = require("../gemini/gemini.service");
+const gemini_service2_1 = require("../gemini/gemini.service2");
 const sdk_1 = require("@deepgram/sdk");
 let VoiceGateway = class VoiceGateway {
     geminiService;
@@ -46,12 +46,12 @@ let VoiceGateway = class VoiceGateway {
             console.log(`👤 User: ${transcript}`);
             twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
             chatHistory.push({ role: 'user', content: transcript });
-            const aiResponse = await this.geminiService.generateResponse(transcript, chatHistory);
+            const aiResponse = await this.geminiService.generateResponse(transcript, chatHistory, (audioBuffer) => {
+                sendAudioToTwilio(audioBuffer.toString('base64'));
+            });
             if (aiResponse) {
                 chatHistory.push({ role: 'assistant', content: aiResponse });
                 console.log(`🤖 Jessica: ${aiResponse}`);
-                const audio = await this.geminiService.speak(aiResponse);
-                sendAudioToTwilio(audio.toString('base64'));
             }
         });
         twilioWs.on('message', (data) => {
@@ -72,6 +72,6 @@ let VoiceGateway = class VoiceGateway {
 exports.VoiceGateway = VoiceGateway;
 exports.VoiceGateway = VoiceGateway = __decorate([
     (0, websockets_1.WebSocketGateway)({ path: '/media-stream' }),
-    __metadata("design:paramtypes", [gemini_service_1.GeminiService])
+    __metadata("design:paramtypes", [gemini_service2_1.GeminiService2])
 ], VoiceGateway);
 //# sourceMappingURL=voice.gateway.js.map
