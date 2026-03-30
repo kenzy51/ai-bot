@@ -14,19 +14,19 @@ import { AnyExpression } from 'mongoose';
 @Controller('calls')
 export class CallsController {
   constructor(private readonly callsService: CallsService) {}
-  @Post('incoming-call')
-  @HttpCode(200) // <--- CRITICAL: Force 200 instead of 201
-  async handleIncoming(@Res() res: any) {
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-  <Response>
-    <Connect>
-      <Stream url="wss://fusion-ai-bot.onrender.com/media-stream" />
-    </Connect>
-  </Response>`;
+@Post('incoming-call')
+async handleIncoming(@Res() res: any) {
+  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Connect>
+    <Stream url="wss://fusion-ai-bot.onrender.com/media-stream" />
+  </Connect>
+</Response>`.trim();
 
-    res.set('Content-Type', 'text/xml');
-    return res.status(200).send(twiml);
-  }
+  res.set('Content-Type', 'text/xml');
+  // Use res.status(200) to ensure we get a green checkmark in Twilio
+  return res.status(200).send(twiml);
+}Ï
 
   @Post('transfer-dial')
   async getTransferDial(@Res() res: any) {
