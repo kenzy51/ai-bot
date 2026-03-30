@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, Res } from '@nestjs/common';
 import { CallsService } from './calls.service';
 import { AnyExpression } from 'mongoose';
 
@@ -6,6 +6,7 @@ import { AnyExpression } from 'mongoose';
 export class CallsController {
   constructor(private readonly callsService: CallsService) {}
   @Post('incoming-call')
+  @HttpCode(200) // <--- CRITICAL: Force 200 instead of 201
   async handleIncoming(@Res() res: any) {
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
   <Response>
