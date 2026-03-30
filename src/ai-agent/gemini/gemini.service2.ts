@@ -46,25 +46,21 @@ export class GeminiService2 implements OnModuleInit {
   }
 
   async makeOutboundCall(to: string) {
-    const ngrokUrl =
-      'https://fusion-ai-bot.onrender.com/leads/incoming-call';
-    try {
-      const call = await this.twilioClient.calls.create({
-        url: ngrokUrl,
-        to: to,
+  try {
+    const call = await this.twilioClient.calls.create({
+      url: `https://${process.env.SERVER_URL}/calls/incoming-call`,
+      to: to,
         from: '+19297022797',
-        record: true,
-        recordingStatusCallback:
-          'https://fusion-ai-bot.onrender.com/calls/recording-callback',
-        recordingStatusCallbackEvent: ['completed'],
-      });
-      this.currentCallSid = call.sid;
-      console.log(`📞 Calling: ${to} | SID: ${call.sid}`);
-    } catch (error) {
-      console.error('❌ Twilio Error:', error);
-    }
+      // THIS IS THE KEY:
+      record: true, 
+      recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
+      recordingStatusCallbackMethod: 'POST',
+    });
+    console.log(`📞 Call initiated: ${call.sid}`);
+  } catch (error) {
+    console.error('❌ Call failed:', error);
   }
-
+}
   private getGroqTools(): any[] {
     return [
       {

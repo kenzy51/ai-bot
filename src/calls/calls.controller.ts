@@ -5,7 +5,7 @@ import { AnyExpression } from 'mongoose';
 @Controller('calls')
 export class CallsController {
   constructor(private readonly callsService: CallsService) {}
-  @Post('incoming-call') // This is the route Twilio hits first
+  @Post('incoming-call')
   async handleIncoming(@Res() res: any) {
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
   <Response>
@@ -17,6 +17,7 @@ export class CallsController {
     res.set('Content-Type', 'text/xml');
     return res.send(twiml);
   }
+
   @Post('transfer-dial')
   async getTransferDial(@Res() res: any) {
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
