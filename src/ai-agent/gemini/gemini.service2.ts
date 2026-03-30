@@ -47,7 +47,7 @@ export class GeminiService2 implements OnModuleInit {
 
   async makeOutboundCall(to: string) {
     const ngrokUrl =
-      'https://lesa-jovial-blushfully.ngrok-free.dev/leads/incoming-call';
+      'https://fusion-ai-bot.onrender.com/leads/incoming-call';
     try {
       const call = await this.twilioClient.calls.create({
         url: ngrokUrl,
@@ -55,7 +55,7 @@ export class GeminiService2 implements OnModuleInit {
         from: '+19297022797',
         record: true,
         recordingStatusCallback:
-          'https://lesa-jovial-blushfully.ngrok-free.dev/calls/recording-callback',
+          'https://fusion-ai-bot.onrender.com/calls/recording-callback',
         recordingStatusCallbackEvent: ['completed'],
       });
       this.currentCallSid = call.sid;
@@ -207,7 +207,6 @@ ${CLINIC_KNOWLEDGE}`,
         }
       }
       // TRICK
-      // TRICK: Check if there is anything left in the buffer (last sentence without a period)
       if (sentenceBuffer.trim()) {
         const finalChunk = sentenceBuffer.trim();
         this.speak(finalChunk).then((audioBuffer) => {
@@ -237,7 +236,8 @@ ${CLINIC_KNOWLEDGE}`,
       console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);
 
       await this.twilioClient.calls(sid).update({
-        url: 'https://lesa-jovial-blushfully.ngrok-free.dev/calls/transfer-dial',
+        // url: 'https://lesa-jovial-blushfully.ngrok-free.dev/calls/transfer-dial',
+        url: 'https://fusion-ai-bot.onrender.com/calls/transfer-dial',
         method: 'POST',
       });
     } catch (err) {

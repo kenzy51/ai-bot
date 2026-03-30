@@ -5,18 +5,29 @@ import { AnyExpression } from 'mongoose';
 @Controller('calls')
 export class CallsController {
   constructor(private readonly callsService: CallsService) {}
+  @Post('incoming-call') // This is the route Twilio hits first
+  async handleIncoming(@Res() res: any) {
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+  <Response>
+    <Connect>
+      <Stream url="wss://fusion-ai-bot.onrender.com/media-stream" />
+    </Connect>
+  </Response>`;
+
+    res.set('Content-Type', 'text/xml');
+    return res.send(twiml);
+  }
   @Post('transfer-dial')
   async getTransferDial(@Res() res: any) {
-    console.log('📞 Twilio is requesting transfer TwiML...');
-
     const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Say>Connecting you to the office now.</Say>
-      <Dial callerId="+19297022797" timeout="60">
-        // <Number>+19178580233</Number>
-        <Number>+19297696545</Number>
-      </Dial>
-    </Response>`;
+  <Response>
+    <Say>Connecting you to the office now.</Say>
+    <Dial record="record-from-answer-dual" 
+          recordingStatusCallback="https://fusion-ai-bot.onrender.com/calls/recording-callback" 
+          callerId="+19297022797">
+      <Number>+19297696545</Number>
+    </Dial>
+  </Response>`;
 
     res.set('Content-Type', 'text/xml');
     return res.send(twiml);
@@ -24,10 +35,15 @@ export class CallsController {
   // src/calls/calls.controller.ts
   @Post('recording-callback')
   async handleRecordingCallback(@Body() body: any) {
-    const { CallSid, RecordingUrl, RecordingDuration } = body;
+    const { CallSid, RecordingUrl } = body;
 
-    await this.callsService.updateCallRecording(CallSid, RecordingUrl);
-    console.log(`✅ Recording saved for ${CallSid}: ${RecordingUrl}`);
+    if (RecordingUrl) {
+      // We add .wav so your frontend <audio> tag can play it directly
+      const directUrl = `${RecordingUrl}.wav`;
+      await this.callsService.updateCallRecording(CallSid, directUrl);
+      console.log(`✅ Recording link synced: ${directUrl}`);
+    }
+    return { status: 'ok' };
   }
   // src/calls/calls.controller.ts
   @Get('stream-recording')
@@ -71,7 +87,7 @@ export class CallsController {
 
       return res.send(buffer);
     } catch (error) {
-      console.error('❌ Proxy Crash:', error); 
+      console.error('❌ Proxy Crash:', error);
       return res.status(500).send('Internal Server Error');
     }
   }
