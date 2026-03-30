@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { CallsService } from './calls.service';
 import { AnyExpression } from 'mongoose';
 
@@ -16,7 +25,7 @@ export class CallsController {
   </Response>`;
 
     res.set('Content-Type', 'text/xml');
-    return res.send(twiml);
+    return res.status(200).send(twiml);
   }
 
   @Post('transfer-dial')
@@ -32,7 +41,7 @@ export class CallsController {
   </Response>`;
 
     res.set('Content-Type', 'text/xml');
-    return res.send(twiml);
+    return res.status(200).send(twiml);
   }
   // src/calls/calls.controller.ts
   @Post('recording-callback')
