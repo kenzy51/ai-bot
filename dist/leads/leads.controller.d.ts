@@ -1,8 +1,8 @@
 import { CallsService } from 'src/calls/calls.service';
 export declare class LeadsController {
+    private readonly callsService;
     private client;
-    callsService: CallsService;
-    constructor();
+    constructor(callsService: CallsService);
     handleIncomingCall(): string;
     handleRecordingCallback(body: any): Promise<{
         status: string;

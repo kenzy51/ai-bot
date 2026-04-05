@@ -42,17 +42,20 @@ const core_1 = require("@nestjs/core");
 const app_module_1 = require("./app.module");
 const platform_ws_1 = require("@nestjs/platform-ws");
 const promises_1 = __importDefault(require("node:dns/promises"));
+const express = __importStar(require("express"));
 promises_1.default.setServers(['8.8.8.8', '8.8.4.4']);
 async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['error', 'warn', 'log'],
     });
+    app.use(express.urlencoded({ extended: true }));
+    app.use(express.json());
     app.enableCors();
     app.useWebSocketAdapter(new platform_ws_1.WsAdapter(app));
     await app.listen(3003);
     console.log('🚀 Server running on port 3003');
 }
-bootstrap().catch(err => {
+bootstrap().catch((err) => {
     console.error('Fatal Error during bootstrap:', err);
 });
 //# sourceMappingURL=main.js.map

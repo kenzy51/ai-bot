@@ -7,33 +7,30 @@ import { Call } from './schemas/call.schema';
 export class CallsService {
   constructor(@InjectModel(Call.name) private callModel: Model<Call>) {}
 
-  // 1. Save the call at the end of the conversation
   async saveCall(callData: Partial<Call>): Promise<Call> {
-    const record = new this.callModel(callData);
-    return record.save();
+    return await this.callModel.findOneAndUpdate(
+      { callSid: callData.callSid },
+      { $set: callData },
+      { upsert: true, new: true }
+    ).exec();
   }
 
-  async updateCall(
-    callSid: string,
-    updateData: Partial<Call>,
-  ): Promise<Call | null> {
-    return await this.callModel
-      .findOneAndUpdate({ callSid }, { $set: updateData }, { new: true })
-      .exec();
-  }
-
+  // 2. Specialized method for the Twilio Recording Webhook
   async updateCallRecording(callSid: string, recordingUrl: string) {
+    console.log(`💾 Persisting recording URL for SID: ${callSid}`);
+    
     return await this.callModel.findOneAndUpdate(
       { callSid: callSid },
       { $set: { recordingUrl: recordingUrl } },
-      { new: true },
-    );
+      { upsert: true, new: true }
+    ).exec();
   }
+
   async getHistoryByBusiness(businessId: string): Promise<Call[]> {
     return this.callModel
       .find({ businessId })
-      .sort({ createdAt: -1 }) // Newest first
-      .limit(50) // Don't overload the dashboard
+      .sort({ createdAt: -1 }) 
+      .limit(50) 
       .exec();
   }
 }

@@ -56,8 +56,10 @@ let VoiceGateway = class VoiceGateway {
         });
         twilioWs.on('message', (data) => {
             const msg = JSON.parse(data);
-            if (msg.event === 'start')
+            if (msg.event === 'start') {
                 streamSid = msg.start.streamSid;
+                this.geminiService.setCurrentCallSid(msg.start.callSid);
+            }
             if (msg.event === 'media' && dgLive.getReadyState() === 1) {
                 dgLive.send(Buffer.from(msg.media.payload, 'base64'));
             }

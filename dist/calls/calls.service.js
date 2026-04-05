@@ -23,16 +23,11 @@ let CallsService = class CallsService {
         this.callModel = callModel;
     }
     async saveCall(callData) {
-        const record = new this.callModel(callData);
-        return record.save();
-    }
-    async updateCall(callSid, updateData) {
-        return await this.callModel
-            .findOneAndUpdate({ callSid }, { $set: updateData }, { new: true })
-            .exec();
+        return await this.callModel.findOneAndUpdate({ callSid: callData.callSid }, { $set: callData }, { upsert: true, new: true }).exec();
     }
     async updateCallRecording(callSid, recordingUrl) {
-        return await this.callModel.findOneAndUpdate({ callSid: callSid }, { $set: { recordingUrl: recordingUrl } }, { new: true });
+        console.log(`💾 Persisting recording URL for SID: ${callSid}`);
+        return await this.callModel.findOneAndUpdate({ callSid: callSid }, { $set: { recordingUrl: recordingUrl } }, { upsert: true, new: true }).exec();
     }
     async getHistoryByBusiness(businessId) {
         return this.callModel

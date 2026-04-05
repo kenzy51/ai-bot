@@ -14,30 +14,35 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LeadsController = void 0;
 const common_1 = require("@nestjs/common");
+const calls_service_1 = require("../calls/calls.service");
 const twilio = require("twilio");
 let LeadsController = class LeadsController {
-    client;
     callsService;
-    constructor() {
+    client;
+    constructor(callsService) {
+        this.callsService = callsService;
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
     handleIncomingCall() {
         return `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Connect>
-        <Stream 
-        url="wss://${process.env.SERVER_URL}/media-stream" 
-        record="true" 
-        recordingStatusCallback="${process.env.SERVER_URL}/leads/recording-callback"
-        recordingStatusCallbackMethod="POST"/>
+        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
       </Connect>
     </Response>`;
     }
     async handleRecordingCallback(body) {
-        const { RecordingUrl, RecordingSid, CallSid, RecordingDuration } = body;
-        console.log(`Recording finished for Call ${CallSid}`);
-        console.log(`Download link: ${RecordingUrl}`);
-        await this.callsService.updateCallRecording(CallSid, RecordingUrl);
+        const { RecordingUrl, CallSid } = body;
+        if (RecordingUrl) {
+            console.log(`✅ Recording finished for Call ${CallSid}`);
+            const finalUrl = `${RecordingUrl}.wav`;
+            try {
+                await this.callsService.updateCallRecording(CallSid, finalUrl);
+            }
+            catch (error) {
+                console.error('❌ DB Update Error:', error.message);
+            }
+        }
         return { status: 'received' };
     }
 };
@@ -58,6 +63,6 @@ __decorate([
 ], LeadsController.prototype, "handleRecordingCallback", null);
 exports.LeadsController = LeadsController = __decorate([
     (0, common_1.Controller)('leads'),
-    __metadata("design:paramtypes", [])
+    __metadata("design:paramtypes", [calls_service_1.CallsService])
 ], LeadsController);
 //# sourceMappingURL=leads.controller.js.map

@@ -49,25 +49,27 @@ let GeminiService2 = class GeminiService2 {
         });
         this.calendar = googleapis_1.google.calendar({ version: 'v3', auth });
     }
+    setCurrentCallSid(sid) {
+        this.currentCallSid = sid;
+    }
     async onModuleInit() {
+        await this.makeOutboundCall('+19297696545');
         console.log('🚀 Fusion AI Backend Started.');
     }
     async makeOutboundCall(to) {
-        const ngrokUrl = 'https://lesa-jovial-blushfully.ngrok-free.dev/leads/incoming-call';
         try {
             const call = await this.twilioClient.calls.create({
-                url: ngrokUrl,
+                url: `https://${process.env.SERVER_URL}/calls/incoming-call`,
                 to: to,
                 from: '+19297022797',
                 record: true,
-                recordingStatusCallback: 'https://lesa-jovial-blushfully.ngrok-free.dev/calls/recording-callback',
-                recordingStatusCallbackEvent: ['completed'],
+                recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
+                recordingStatusCallbackMethod: 'POST',
             });
-            this.currentCallSid = call.sid;
-            console.log(`📞 Calling: ${to} | SID: ${call.sid}`);
+            console.log(`📞 Call initiated: ${call.sid}`);
         }
         catch (error) {
-            console.error('❌ Twilio Error:', error);
+            console.error('❌ Call failed:', error);
         }
     }
     getGroqTools() {
@@ -212,7 +214,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
         try {
             console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);
             await this.twilioClient.calls(sid).update({
-                url: 'https://lesa-jovial-blushfully.ngrok-free.dev/calls/transfer-dial',
+                url: 'https://fusion-ai-bot.onrender.com/calls/transfer-dial',
                 method: 'POST',
             });
         }

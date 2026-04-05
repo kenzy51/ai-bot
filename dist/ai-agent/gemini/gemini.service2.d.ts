@@ -14,6 +14,7 @@ export declare class GeminiService2 implements OnModuleInit {
     private isLogging;
     private currentCallSid;
     constructor(callsService: CallsService);
+    setCurrentCallSid(sid: string): void;
     onModuleInit(): Promise<void>;
     makeOutboundCall(to: string): Promise<void>;
     private getGroqTools;

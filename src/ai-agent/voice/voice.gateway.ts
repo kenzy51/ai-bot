@@ -70,7 +70,10 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     twilioWs.on('message', (data: string) => {
       const msg = JSON.parse(data);
-      if (msg.event === 'start') streamSid = msg.start.streamSid;
+      if (msg.event === 'start') {
+        streamSid = msg.start.streamSid;
+        this.geminiService.setCurrentCallSid(msg.start.callSid);
+      }
       if (msg.event === 'media' && dgLive.getReadyState() === 1) {
         // @ts-ignore
         dgLive.send(Buffer.from(msg.media.payload, 'base64'));

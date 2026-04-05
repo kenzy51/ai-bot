@@ -20,23 +20,38 @@ let CallsController = class CallsController {
     constructor(callsService) {
         this.callsService = callsService;
     }
-    async getTransferDial(res) {
-        console.log('📞 Twilio is requesting transfer TwiML...');
+    async handleIncoming(res) {
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Say>Connecting you to the office now.</Say>
-      <Dial callerId="+19297022797" timeout="60">
-        // <Number>+19178580233</Number>
-        <Number>+19297696545</Number>
-      </Dial>
-    </Response>`;
+<Response>
+  <Connect>
+    <Stream url="wss://fusion-ai-bot.onrender.com/media-stream" />
+  </Connect>
+</Response>`.trim();
         res.set('Content-Type', 'text/xml');
-        return res.send(twiml);
+        return res.status(200).send(twiml);
+    }
+    Ï;
+    async getTransferDial(res) {
+        const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+  <Response>
+    <Say>Connecting you to the office now.</Say>
+    <Dial record="record-from-answer-dual" 
+          recordingStatusCallback="https://fusion-ai-bot.onrender.com/calls/recording-callback" 
+          callerId="+19297022797">
+      <Number>+19297696545</Number>
+    </Dial>
+  </Response>`;
+        res.set('Content-Type', 'text/xml');
+        return res.status(200).send(twiml);
     }
     async handleRecordingCallback(body) {
-        const { CallSid, RecordingUrl, RecordingDuration } = body;
-        await this.callsService.updateCallRecording(CallSid, RecordingUrl);
-        console.log(`✅ Recording saved for ${CallSid}: ${RecordingUrl}`);
+        const { CallSid, RecordingUrl } = body;
+        if (RecordingUrl) {
+            const directUrl = `${RecordingUrl}.wav`;
+            await this.callsService.updateCallRecording(CallSid, directUrl);
+            console.log(`✅ Recording link synced: ${directUrl}`);
+        }
+        return { status: 'ok' };
     }
     async streamRecording(recordingUrl, res) {
         if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
@@ -78,6 +93,13 @@ let CallsController = class CallsController {
     }
 };
 exports.CallsController = CallsController;
+__decorate([
+    (0, common_1.Post)('incoming-call'),
+    __param(0, (0, common_1.Res)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], CallsController.prototype, "handleIncoming", null);
 __decorate([
     (0, common_1.Post)('transfer-dial'),
     __param(0, (0, common_1.Res)()),
