@@ -31,7 +31,6 @@ let GeminiService2 = class GeminiService2 {
     isProcessing = false;
     elevenlabs;
     lastAction = '';
-    chatHistory = [];
     callStatus = 'inquiry';
     isLogging = false;
     currentCallSid = '';
@@ -109,9 +108,6 @@ let GeminiService2 = class GeminiService2 {
             return '';
         this.isProcessing = true;
         const leanHistory = passedHistory.slice(-10);
-        this.chatHistory.push({ role: 'user', content: userText });
-        if (this.chatHistory.length > 12)
-            this.chatHistory.shift();
         const now = new Date();
         const nyTime = now.toLocaleString('en-US', {
             timeZone: 'America/New_York',
@@ -162,24 +158,26 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                 temperature: 0,
                 stream: true,
             });
-            let firstChunkSent = false;
             let fullContent = '';
             let sentenceBuffer = '';
+            let speechQueue = Promise.resolve();
             for await (const chunk of response) {
                 const content = chunk.choices[0]?.delta?.content || '';
                 if (content) {
                     fullContent += content;
                     sentenceBuffer += content;
-                    const words = sentenceBuffer.trim().split(' ');
-                    if (/[.!?]/.test(content) || (!firstChunkSent && words.length > 7)) {
-                        const textToSpeak = sentenceBuffer.trim();
-                        if (textToSpeak) {
-                            this.speak(textToSpeak).then((audioBuffer) => {
+                    if (/[.!?]/.test(content)) {
+                        const trimmedBuffer = sentenceBuffer.trim();
+                        const isTitle = /\b(dr|mr|ms|mrs|st)\.$/i.test(trimmedBuffer);
+                        if (trimmedBuffer && !isTitle) {
+                            const speechOutput = trimmedBuffer;
+                            sentenceBuffer = '';
+                            speechQueue = speechQueue.then(async () => {
+                                const audioBuffer = await this.speak(speechOutput);
                                 onAudioData(audioBuffer);
+                                console.log(`🔊 Sent to Voice (IN ORDER): ${speechOutput}`);
                             });
-                            firstChunkSent = true;
                         }
-                        sentenceBuffer = '';
                     }
                 }
                 const toolCall = chunk.choices[0]?.delta?.tool_calls?.[0];
@@ -189,14 +187,12 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                 }
             }
             if (sentenceBuffer.trim()) {
-                const finalChunk = sentenceBuffer.trim();
-                this.speak(finalChunk).then((audioBuffer) => {
+                const finalText = sentenceBuffer.trim();
+                speechQueue = speechQueue.then(async () => {
+                    const audioBuffer = await this.speak(finalText);
                     onAudioData(audioBuffer);
-                    console.log(`🔊 Streaming final chunk: ${finalChunk}`);
+                    console.log(`🔊 Final Chunk Sent: ${finalText}`);
                 });
-            }
-            if (fullContent) {
-                this.chatHistory.push({ role: 'assistant', content: fullContent });
             }
             this.isProcessing = false;
             return fullContent;
@@ -221,25 +217,24 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
             console.error('❌ Twilio Transfer Error:', err);
         }
     }
-    async onCallDisconnect() {
+    async onCallDisconnect(finalHistory) {
         if (this.isLogging)
             return;
         this.isLogging = true;
         const sidToLog = this.currentCallSid;
-        await this.logToDatabase(this.callStatus, sidToLog);
-        const transcriptString = this.chatHistory
+        await this.logToDatabase(this.callStatus, sidToLog, finalHistory);
+        const transcriptString = finalHistory
             .map((h) => `<b>${h.role}:</b> ${h.content}`)
             .join('<br>');
         await this.handleNotifications('NightLase Inquiry', new Date().toLocaleString(), transcriptString);
-        this.chatHistory = [];
         this.currentCallSid = '';
         this.callStatus = 'inquiry';
         this.isLogging = false;
     }
-    async logToDatabase(status, sid) {
+    async logToDatabase(status, sid, history) {
         try {
             let dbSummary = 'Inquiry about NightLase';
-            if (this.chatHistory.length >= 2) {
+            if (history.length >= 2) {
                 const sumResp = await this.groq.chat.completions.create({
                     model: 'llama-3.1-8b-instant',
                     messages: [
@@ -249,9 +244,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                         },
                         {
                             role: 'user',
-                            content: this.chatHistory
-                                .map((h) => `${h.role}: ${h.content}`)
-                                .join('\n'),
+                            content: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
                         },
                     ],
                 });
@@ -262,9 +255,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                 patientPhone: '+19297696545',
                 callSid: sid,
                 summary: dbSummary,
-                transcript: this.chatHistory
-                    .map((h) => `${h.role}: ${h.content}`)
-                    .join('\n'),
+                transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
                 status: status,
                 procedure: 'NightLase',
             });

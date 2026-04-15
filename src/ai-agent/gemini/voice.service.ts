@@ -9,7 +9,7 @@ import { ElevenLabsClient } from 'elevenlabs';
 import sgMail from '@sendgrid/mail';
 import { CallsService } from 'src/calls/calls.service';
 @Injectable()
-export class GeminiService2 implements OnModuleInit {
+export class VoiceService implements OnModuleInit {
   private deepgram: DeepgramClient;
   private groq: Groq;
   private calendar;
@@ -17,7 +17,6 @@ export class GeminiService2 implements OnModuleInit {
   private isProcessing = false;
   private elevenlabs: ElevenLabsClient;
   private lastAction = '';
-  private chatHistory: any[] = [];
   private callStatus: string = 'inquiry';
   private isLogging = false;
   private currentCallSid: string = '';
@@ -109,8 +108,6 @@ export class GeminiService2 implements OnModuleInit {
     if (this.isProcessing) return '';
     this.isProcessing = true;
     const leanHistory = passedHistory.slice(-10); // 1. Manage Chat History - Keep it lean to save tokens and improve AI focus
-    this.chatHistory.push({ role: 'user', content: userText });
-    if (this.chatHistory.length > 12) this.chatHistory.shift();
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
       timeZone: 'America/New_York',
@@ -162,38 +159,59 @@ ${CLINIC_KNOWLEDGE}`,
         temperature: 0,
         stream: true,
       });
-      let firstChunkSent = false;
       let fullContent = '';
       let sentenceBuffer = '';
-
+      let speechQueue = Promise.resolve();
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta?.content || '';
+        // if (content) {
+        //   fullContent += content;
+        //   sentenceBuffer += content;
+
+        //   // Check if the current chunk contains sentence-ending punctuation
+        //   if (/[.!?]/.test(content)) {
+        //     const trimmedBuffer = sentenceBuffer.trim();
+
+        //     // REGEX EXPLAINED:
+        //     // This looks at the buffer and checks if it ends with "Dr." or "Mr."
+        //     // (case insensitive). If it does, we DO NOT speak yet.
+        //     const isTitle = /\b(dr|mr|ms|mrs|st)\.$/i.test(trimmedBuffer);
+
+        //     if (trimmedBuffer && !isTitle) {
+        //       const speechOutput = trimmedBuffer;
+        //       sentenceBuffer = ''; // Clear the buffer for the next sentence
+
+        //       this.speak(speechOutput).then((audioBuffer) => {
+        //         onAudioData(audioBuffer);
+        //         console.log(`🔊 Sent to Voice: ${speechOutput}`);
+        //       });
+        //     }
+        //   }
+        // }
 
         if (content) {
           fullContent += content;
           sentenceBuffer += content;
 
-          const words = sentenceBuffer.trim().split(/\s+/);
+          if (/[.!?]/.test(content)) {
+            const trimmedBuffer = sentenceBuffer.trim();
+            const isTitle = /\b(dr|mr|ms|mrs|st)\.$/i.test(trimmedBuffer);
 
-          const hasPunctuation = /[.!?]/.test(content);
-          const isLongEnough = !firstChunkSent && words.length >= 6;
-
-          if (hasPunctuation || isLongEnough) {
-            const textToSpeak = sentenceBuffer.trim();
-
-            if (textToSpeak) {
+            if (trimmedBuffer && !isTitle) {
+              const speechOutput = trimmedBuffer;
               sentenceBuffer = '';
-              if (!firstChunkSent) firstChunkSent = true;
-              const currentText = textToSpeak;
 
-              this.speak(currentText).then((audioBuffer) => {
+              // 2. CHAIN THE PROMISE
+              // This forces the code to wait for the previous 'speak' to finish
+              // its processing before starting the next one.
+              speechQueue = speechQueue.then(async () => {
+                const audioBuffer = await this.speak(speechOutput);
                 onAudioData(audioBuffer);
-                console.log(`🤖 Jessica: ${currentText}`); // Log exactly what is being spoken
+                console.log(`🔊 Sent to Voice (IN ORDER): ${speechOutput}`);
               });
             }
           }
         }
-
         // Handle tool calls in a stream (Simplified for stability)
         const toolCall = chunk.choices[0]?.delta?.tool_calls?.[0];
         if (toolCall?.function?.name === 'transfer_call') {
@@ -203,16 +221,12 @@ ${CLINIC_KNOWLEDGE}`,
       }
       // TRICK
       if (sentenceBuffer.trim()) {
-        const finalChunk = sentenceBuffer.trim();
-        this.speak(finalChunk).then((audioBuffer) => {
+        const finalText = sentenceBuffer.trim();
+        speechQueue = speechQueue.then(async () => {
+          const audioBuffer = await this.speak(finalText);
           onAudioData(audioBuffer);
-          console.log(`🔊 Streaming final chunk: ${finalChunk}`);
+          console.log(`🔊 Final Chunk Sent: ${finalText}`);
         });
-      }
-
-      // Record the final combined response to history
-      if (fullContent) {
-        this.chatHistory.push({ role: 'assistant', content: fullContent });
       }
 
       this.isProcessing = false; // Reset early
@@ -239,15 +253,15 @@ ${CLINIC_KNOWLEDGE}`,
       console.error('❌ Twilio Transfer Error:', err);
     }
   }
-  async onCallDisconnect() {
+  async onCallDisconnect(finalHistory: any[]) {
     if (this.isLogging) return;
     this.isLogging = true;
 
     const sidToLog = this.currentCallSid;
 
-    await this.logToDatabase(this.callStatus, sidToLog);
+    await this.logToDatabase(this.callStatus, sidToLog, finalHistory);
 
-    const transcriptString = this.chatHistory
+    const transcriptString = finalHistory
       .map((h) => `<b>${h.role}:</b> ${h.content}`)
       .join('<br>');
 
@@ -258,19 +272,18 @@ ${CLINIC_KNOWLEDGE}`,
     );
 
     // 3. Reset state
-    this.chatHistory = [];
     this.currentCallSid = '';
     this.callStatus = 'inquiry';
     this.isLogging = false;
   }
 
   // HELPER: Handles DB Saving and Dynamic Summary
-  private async logToDatabase(status: string, sid: string) {
+  private async logToDatabase(status: string, sid: string, history: any[]) {
     try {
       let dbSummary = 'Inquiry about NightLase';
 
       // Generate summary only if there's enough dialogue
-      if (this.chatHistory.length >= 2) {
+      if (history.length >= 2) {
         const sumResp = await this.groq.chat.completions.create({
           model: 'llama-3.1-8b-instant', // Updated to current model
           messages: [
@@ -280,9 +293,7 @@ ${CLINIC_KNOWLEDGE}`,
             },
             {
               role: 'user',
-              content: this.chatHistory
-                .map((h) => `${h.role}: ${h.content}`)
-                .join('\n'),
+              content: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
             },
           ],
         });
@@ -294,9 +305,7 @@ ${CLINIC_KNOWLEDGE}`,
         patientPhone: '+19297696545',
         callSid: sid,
         summary: dbSummary,
-        transcript: this.chatHistory
-          .map((h) => `${h.role}: ${h.content}`)
-          .join('\n'),
+        transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
         status: status,
         procedure: 'NightLase',
       });
@@ -387,9 +396,7 @@ ${CLINIC_KNOWLEDGE}`,
       smart_format: true,
       endpointing: 200,
       vad_events: true,
-      // Reduce keywords to only the most critical ones
       keywords: ['NightLase:2', 'Fotona:2', 'Tribeca:1.5'],
-      // Remove 'search' as it's often redundant with 'keywords'
     });
   }
 

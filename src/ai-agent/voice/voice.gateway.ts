@@ -3,24 +3,22 @@ import {
   OnGatewayConnection,
   OnGatewayDisconnect,
 } from '@nestjs/websockets';
-import { GeminiService2 } from '../gemini/gemini.service2';
+import { VoiceService } from '../gemini/voice.service';
 import * as WebSocket from 'ws';
 import { LiveTranscriptionEvents } from '@deepgram/sdk';
 
 @WebSocketGateway({ path: '/media-stream' })
 export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly geminiService: GeminiService2) {}
-
+  constructor(private readonly geminiService: VoiceService) {}
+  private chatHistories = new Map<WebSocket, any[]>();
   // Tracks CallSid per WebSocket connection
   private sessions = new Map<WebSocket, string>();
 
   handleConnection(twilioWs: WebSocket) {
-    console.log('🚀 Twilio connected. Initializing fresh session.');
-
     let chatHistory: any[] = [];
     let streamSid: string = '';
     const dgLive = this.geminiService.getDeepgramLive();
-
+    this.chatHistories.set(twilioWs, chatHistory);
     const sendAudioToTwilio = (base64Audio: string) => {
       if (!streamSid) return;
       twilioWs.send(
@@ -48,7 +46,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
 
       chatHistory.push({ role: 'user', content: transcript });
-
       const aiResponse = await this.geminiService.generateResponse(
         transcript,
         chatHistory,
@@ -95,14 +92,16 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     console.log('❌ WebSocket Disconnected');
 
     const callSid = this.sessions.get(twilioWs);
+    const history = this.chatHistories.get(twilioWs);
 
     if (callSid) {
       console.log(`📊 Finalizing Log and Summary for: ${callSid}`);
-      // Triggers GeminiService2.onCallDisconnect() which handles the DB save
-      await this.geminiService.onCallDisconnect();
+      // @ts-ignore
+      await this.geminiService.onCallDisconnect(history);
 
       // Cleanup to prevent memory leaks
       this.sessions.delete(twilioWs);
+      this.chatHistories.delete(twilioWs); // <--- ADD THIS LINE
     } else {
       console.log(
         '⚠️ Disconnect detected but no CallSid was found in session map.',

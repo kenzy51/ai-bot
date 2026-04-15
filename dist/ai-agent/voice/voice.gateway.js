@@ -18,12 +18,13 @@ let VoiceGateway = class VoiceGateway {
     constructor(geminiService) {
         this.geminiService = geminiService;
     }
+    chatHistories = new Map();
     sessions = new Map();
     handleConnection(twilioWs) {
-        console.log('🚀 Twilio connected. Initializing fresh session.');
         let chatHistory = [];
         let streamSid = '';
         const dgLive = this.geminiService.getDeepgramLive();
+        this.chatHistories.set(twilioWs, chatHistory);
         const sendAudioToTwilio = (base64Audio) => {
             if (!streamSid)
                 return;
@@ -79,10 +80,12 @@ let VoiceGateway = class VoiceGateway {
     async handleDisconnect(twilioWs) {
         console.log('❌ WebSocket Disconnected');
         const callSid = this.sessions.get(twilioWs);
+        const history = this.chatHistories.get(twilioWs);
         if (callSid) {
             console.log(`📊 Finalizing Log and Summary for: ${callSid}`);
-            await this.geminiService.onCallDisconnect();
+            await this.geminiService.onCallDisconnect(history);
             this.sessions.delete(twilioWs);
+            this.chatHistories.delete(twilioWs);
         }
         else {
             console.log('⚠️ Disconnect detected but no CallSid was found in session map.');

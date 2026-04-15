@@ -9,7 +9,6 @@ export declare class GeminiService2 implements OnModuleInit {
     private isProcessing;
     private elevenlabs;
     private lastAction;
-    private chatHistory;
     private callStatus;
     private isLogging;
     private currentCallSid;
@@ -20,7 +19,7 @@ export declare class GeminiService2 implements OnModuleInit {
     private getGroqTools;
     generateResponse(userText: string, passedHistory: any[], onAudioData: (buffer: Buffer) => void): Promise<string>;
     transferCall(sid: string): Promise<void>;
-    onCallDisconnect(): Promise<void>;
+    onCallDisconnect(finalHistory: any[]): Promise<void>;
     private logToDatabase;
     private handleNotifications;
     private createCalendarEvent;
