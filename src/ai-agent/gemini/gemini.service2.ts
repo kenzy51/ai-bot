@@ -103,16 +103,14 @@ export class GeminiService2 implements OnModuleInit {
 
   async generateResponse(
     userText: string,
-    history: any[],
+    passedHistory: any[], // Use the history passed from the Gateway
     onAudioData: (buffer: Buffer) => void,
   ) {
     if (this.isProcessing) return '';
     this.isProcessing = true;
-    const messages = [...history, { role: 'user', content: userText }];
-    // 1. Manage Chat History - Keep it lean to save tokens and improve AI focus
+    const leanHistory = passedHistory.slice(-10); // 1. Manage Chat History - Keep it lean to save tokens and improve AI focus
     this.chatHistory.push({ role: 'user', content: userText });
     if (this.chatHistory.length > 12) this.chatHistory.shift();
-    const leanHistory = this.chatHistory.slice(-6);
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
       timeZone: 'America/New_York',
@@ -162,13 +160,12 @@ ${CLINIC_KNOWLEDGE}`,
         tools: this.getGroqTools() as any,
         tool_choice: 'auto',
         temperature: 0,
-        stream: true, // This triggered the error in your screenshot
+        stream: true,
       });
-
+      let firstChunkSent = false;
       let fullContent = '';
       let sentenceBuffer = '';
 
-      // Iterate through the stream chunks to fix the 'choices' error
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta?.content || '';
 
@@ -176,24 +173,24 @@ ${CLINIC_KNOWLEDGE}`,
           fullContent += content;
           sentenceBuffer += content;
 
-          // LATENCY OPTIMIZATION: If we hit a sentence end, speak it immediately
-          if (
-            /[.!?]/.test(content) &&
-            !sentenceBuffer.toLowerCase().endsWith('dr.')
-          ) {
+          const words = sentenceBuffer.trim().split(/\s+/);
+
+          const hasPunctuation = /[.!?]/.test(content);
+          const isLongEnough = !firstChunkSent && words.length >= 6;
+
+          if (hasPunctuation || isLongEnough) {
             const textToSpeak = sentenceBuffer.trim();
+
             if (textToSpeak) {
-              // We don't 'await' this so the loop can keep getting the next sentence
-              // this.speak(textToSpeak).then((audioBuffer) => {
-              //   // Logic to stream this audioBuffer to Twilio goes here
-              //   console.log(`🔊 Speaking chunk: ${textToSpeak}`);
-              // });
-              this.speak(textToSpeak).then((audioBuffer) => {
-                onAudioData(audioBuffer); // Send audio to Twilio RIGHT NOW
-                console.log(`🔊 Streaming chunk: ${textToSpeak}`);
+              sentenceBuffer = '';
+              if (!firstChunkSent) firstChunkSent = true;
+              const currentText = textToSpeak;
+
+              this.speak(currentText).then((audioBuffer) => {
+                onAudioData(audioBuffer);
+                console.log(`🤖 Jessica: ${currentText}`); // Log exactly what is being spoken
               });
             }
-            sentenceBuffer = ''; // Clear buffer for next sentence
           }
         }
 
@@ -242,15 +239,28 @@ ${CLINIC_KNOWLEDGE}`,
       console.error('❌ Twilio Transfer Error:', err);
     }
   }
-  // NEW: Call this method when Twilio disconnects (e.g., from your CallsController or wherever the disconnect event is handled).
-  // This ensures the full transcript is saved once at the end of the call, regardless of booking status.
   async onCallDisconnect() {
-    if (this.isLogging) return; // Prevent double execution
+    if (this.isLogging) return;
     this.isLogging = true;
 
     const sidToLog = this.currentCallSid;
+
     await this.logToDatabase(this.callStatus, sidToLog);
 
+    const transcriptString = this.chatHistory
+      .map((h) => `<b>${h.role}:</b> ${h.content}`)
+      .join('<br>');
+
+    await this.handleNotifications(
+      'NightLase Inquiry',
+      new Date().toLocaleString(),
+      transcriptString,
+    );
+
+    // 3. Reset state
+    this.chatHistory = [];
+    this.currentCallSid = '';
+    this.callStatus = 'inquiry';
     this.isLogging = false;
   }
 
@@ -304,12 +314,11 @@ ${CLINIC_KNOWLEDGE}`,
   ) {
     try {
       await sgMail.send({
-        to: 'kanatnazarov51@gmail.com',
+        to: 'pr@nytds.com',
         from: 'kanatnazarov.dev@gmail.com',
-        subject: `✅ New Booking: ${procedure}`,
-        html: `<p>New booking for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
+        subject: `Transwcipt of conversation: ${procedure}`,
+        html: `<p>New transcript for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
       });
-      console.log('📧 CEO Alert Sent');
     } catch (err) {
       console.error('❌ Email Failed');
     }
@@ -336,26 +345,6 @@ ${CLINIC_KNOWLEDGE}`,
       requestBody: event,
     });
   }
-
-  // async speak(text: string): Promise<Buffer> {
-  //   try {
-  //     const audioStream = await this.elevenlabs.textToSpeech.convert(
-  //       'PBZ6PhGMbBIzGFQBGF5u',
-  //       { text, model_id: 'eleven_turbo_v2', output_format: 'ulaw_8000' },
-  //     );
-
-  //     const chunks = [];
-  //     for await (const chunk of audioStream) {
-  //       // @ts-ignore
-  //       chunks.push(chunk);
-  //     }
-  //     return Buffer.concat(chunks);
-  //   } catch (error) {
-  //     console.error('❌ ElevenLabs Error:', error);
-  //     throw error;
-  //   }
-  // }
-
   async speak(text: string): Promise<Buffer> {
     try {
       const response = await fetch(
@@ -390,31 +379,17 @@ ${CLINIC_KNOWLEDGE}`,
   //
   getDeepgramLive() {
     return this.deepgram.listen.live({
-      // model: 'nova-2-medical',
-      // language: 'en-US',
-      // encoding: 'mulaw',
-      // sample_rate: 8000,
-      // interim_results: true,
-      // endpointing: 800,
-      // smart_format: true,
-      // vad_events: true, // Use Voice Activity Detection to stop listening when no one is talking
-      model: 'nova-2', // Try switching from 'nova-2-medical' to 'nova-2' to test if it's a model-access issue
+      model: 'nova-2',
       language: 'en-US',
       encoding: 'mulaw',
       sample_rate: 8000,
-      interim_results: true, // Set to false to reduce WebSocket traffic unless you specifically need real-time captions
+      interim_results: true,
       smart_format: true,
-      endpointing: 300, // Reduced from 300; AI starts thinking 200ms after you stop
-      utterance_end_ms: 1000, // Forces an end if there is a long pause
+      endpointing: 200,
       vad_events: true,
-      keywords: [
-        'NightLase:2',
-        'Fotona:2',
-        'snoring:1.5',
-        'concierge:1.2',
-        'Tribeca:1.5',
-      ],
-      search: ['nightlase', 'fotona'], // Helps with "NightLase" recognition
+      // Reduce keywords to only the most critical ones
+      keywords: ['NightLase:2', 'Fotona:2', 'Tribeca:1.5'],
+      // Remove 'search' as it's often redundant with 'keywords'
     });
   }
 

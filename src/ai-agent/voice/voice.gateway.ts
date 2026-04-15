@@ -11,10 +11,12 @@ import { LiveTranscriptionEvents } from '@deepgram/sdk';
 export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   constructor(private readonly geminiService: GeminiService2) {}
 
+  // Tracks CallSid per WebSocket connection
+  private sessions = new Map<WebSocket, string>();
+
   handleConnection(twilioWs: WebSocket) {
     console.log('🚀 Twilio connected. Initializing fresh session.');
 
-    // UNIQUE STATE: This history exists only for this one caller
     let chatHistory: any[] = [];
     let streamSid: string = '';
     const dgLive = this.geminiService.getDeepgramLive();
@@ -32,7 +34,6 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     dgLive.on(LiveTranscriptionEvents.Open, async () => {
       console.log('✅ Deepgram Ready');
-      // Send initial greeting immediately
       const greeting = await this.geminiService.getInitialGreeting();
       chatHistory.push({ role: 'assistant', content: greeting });
       const audio = await this.geminiService.speak(greeting);
@@ -44,18 +45,14 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (!data.is_final || !transcript || transcript.trim().length < 3) return;
 
       console.log(`👤 User: ${transcript}`);
-      // 1. Interrupt (Barge-in)
       twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
 
-      // 2. Add user input to local state
       chatHistory.push({ role: 'user', content: transcript });
 
-      // 3. Generate response using passed-in history
       const aiResponse = await this.geminiService.generateResponse(
         transcript,
         chatHistory,
         (audioBuffer) => {
-          // This runs as soon as the first sentence is converted to audio!
           sendAudioToTwilio(audioBuffer.toString('base64'));
         },
       );
@@ -63,26 +60,53 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       if (aiResponse) {
         chatHistory.push({ role: 'assistant', content: aiResponse });
         console.log(`🤖 Jessica: ${aiResponse}`);
-        // const audio = await this.geminiService.speak(aiResponse);
-        // sendAudioToTwilio(audio.toString('base64'));
       }
     });
-
+    dgLive.on(LiveTranscriptionEvents.Error, (err) => {
+      console.error('❌ Deepgram Socket Error:', err);
+    });
     twilioWs.on('message', (data: string) => {
       const msg = JSON.parse(data);
       if (msg.event === 'start') {
         streamSid = msg.start.streamSid;
-        this.geminiService.setCurrentCallSid(msg.start.callSid);
+        const callSid = msg.start.callSid;
+
+        // CRITICAL: Link this socket to the CallSid for the disconnect trigger
+        this.sessions.set(twilioWs, callSid);
+        this.geminiService.setCurrentCallSid(callSid);
+
+        console.log(`📞 Call Started: ${callSid}`);
       }
+
       if (msg.event === 'media' && dgLive.getReadyState() === 1) {
         // @ts-ignore
         dgLive.send(Buffer.from(msg.media.payload, 'base64'));
       }
-      if (msg.event === 'stop') dgLive.requestClose();
+
+      if (msg.event === 'stop') {
+        console.log('🛑 Twilio sent stop event');
+        dgLive.requestClose();
+      }
     });
   }
 
-  handleDisconnect() {
-    console.log('❌ Call ended');
+  // This fires when the patient hangs up
+  async handleDisconnect(twilioWs: WebSocket) {
+    console.log('❌ WebSocket Disconnected');
+
+    const callSid = this.sessions.get(twilioWs);
+
+    if (callSid) {
+      console.log(`📊 Finalizing Log and Summary for: ${callSid}`);
+      // Triggers GeminiService2.onCallDisconnect() which handles the DB save
+      await this.geminiService.onCallDisconnect();
+
+      // Cleanup to prevent memory leaks
+      this.sessions.delete(twilioWs);
+    } else {
+      console.log(
+        '⚠️ Disconnect detected but no CallSid was found in session map.',
+      );
+    }
   }
 }

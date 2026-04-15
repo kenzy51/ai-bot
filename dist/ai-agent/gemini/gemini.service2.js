@@ -53,7 +53,6 @@ let GeminiService2 = class GeminiService2 {
         this.currentCallSid = sid;
     }
     async onModuleInit() {
-        await this.makeOutboundCall('+19297696545');
         console.log('🚀 Fusion AI Backend Started.');
     }
     async makeOutboundCall(to) {
@@ -105,15 +104,14 @@ let GeminiService2 = class GeminiService2 {
             },
         ];
     }
-    async generateResponse(userText, history, onAudioData) {
+    async generateResponse(userText, passedHistory, onAudioData) {
         if (this.isProcessing)
             return '';
         this.isProcessing = true;
-        const messages = [...history, { role: 'user', content: userText }];
+        const leanHistory = passedHistory.slice(-10);
         this.chatHistory.push({ role: 'user', content: userText });
         if (this.chatHistory.length > 12)
             this.chatHistory.shift();
-        const leanHistory = this.chatHistory.slice(-6);
         const now = new Date();
         const nyTime = now.toLocaleString('en-US', {
             timeZone: 'America/New_York',
@@ -164,6 +162,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                 temperature: 0,
                 stream: true,
             });
+            let firstChunkSent = false;
             let fullContent = '';
             let sentenceBuffer = '';
             for await (const chunk of response) {
@@ -171,14 +170,14 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                 if (content) {
                     fullContent += content;
                     sentenceBuffer += content;
-                    if (/[.!?]/.test(content) &&
-                        !sentenceBuffer.toLowerCase().endsWith('dr.')) {
+                    const words = sentenceBuffer.trim().split(' ');
+                    if (/[.!?]/.test(content) || (!firstChunkSent && words.length > 7)) {
                         const textToSpeak = sentenceBuffer.trim();
                         if (textToSpeak) {
                             this.speak(textToSpeak).then((audioBuffer) => {
                                 onAudioData(audioBuffer);
-                                console.log(`🔊 Streaming chunk: ${textToSpeak}`);
                             });
+                            firstChunkSent = true;
                         }
                         sentenceBuffer = '';
                     }
@@ -228,6 +227,13 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
         this.isLogging = true;
         const sidToLog = this.currentCallSid;
         await this.logToDatabase(this.callStatus, sidToLog);
+        const transcriptString = this.chatHistory
+            .map((h) => `<b>${h.role}:</b> ${h.content}`)
+            .join('<br>');
+        await this.handleNotifications('NightLase Inquiry', new Date().toLocaleString(), transcriptString);
+        this.chatHistory = [];
+        this.currentCallSid = '';
+        this.callStatus = 'inquiry';
         this.isLogging = false;
     }
     async logToDatabase(status, sid) {
@@ -271,12 +277,11 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
     async handleNotifications(procedure, timeStr, userText) {
         try {
             await mail_1.default.send({
-                to: 'kanatnazarov51@gmail.com',
+                to: 'pr@nytds.com',
                 from: 'kanatnazarov.dev@gmail.com',
-                subject: `✅ New Booking: ${procedure}`,
-                html: `<p>New booking for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
+                subject: `Transwcipt of conversation: ${procedure}`,
+                html: `<p>New transcript for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
             });
-            console.log('📧 CEO Alert Sent');
         }
         catch (err) {
             console.error('❌ Email Failed');
@@ -335,17 +340,9 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
             sample_rate: 8000,
             interim_results: true,
             smart_format: true,
-            endpointing: 300,
-            utterance_end_ms: 1000,
+            endpointing: 200,
             vad_events: true,
-            keywords: [
-                'NightLase:2',
-                'Fotona:2',
-                'snoring:1.5',
-                'concierge:1.2',
-                'Tribeca:1.5',
-            ],
-            search: ['nightlase', 'fotona'],
+            keywords: ['NightLase:2', 'Fotona:2', 'Tribeca:1.5'],
         });
     }
     async getInitialGreeting() {

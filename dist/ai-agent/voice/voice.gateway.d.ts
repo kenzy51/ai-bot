@@ -4,6 +4,7 @@ import * as WebSocket from 'ws';
 export declare class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly geminiService;
     constructor(geminiService: GeminiService2);
+    private sessions;
     handleConnection(twilioWs: WebSocket): void;
-    handleDisconnect(): void;
+    handleDisconnect(twilioWs: WebSocket): Promise<void>;
 }

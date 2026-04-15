@@ -3,7 +3,6 @@ export declare class CallsController {
     private readonly callsService;
     constructor(callsService: CallsService);
     handleIncoming(res: any): Promise<any>;
-    Ï: any;
     getTransferDial(res: any): Promise<any>;
     handleRecordingCallback(body: any): Promise<{
         status: string;

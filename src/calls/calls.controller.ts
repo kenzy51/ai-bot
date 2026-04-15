@@ -14,19 +14,27 @@ import { AnyExpression } from 'mongoose';
 @Controller('calls')
 export class CallsController {
   constructor(private readonly callsService: CallsService) {}
-@Post('incoming-call')
-async handleIncoming(@Res() res: any) {
-  const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+  // CallsController.ts
+  @Post('incoming-call')
+  async handleIncoming(@Res() res: any) {
+    const ngrokUrl = 'https://lesa-jovial-blushfully.ngrok-free.dev';
+
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
+  <Start>
+    <Recording 
+      recordingStatusCallback="${ngrokUrl}/calls/recording-callback"
+      recordingStatusCallbackMethod="POST"
+    />
+  </Start>
   <Connect>
-    <Stream url="wss://fusion-ai-bot.onrender.com/media-stream" />
+    <Stream url="wss://${ngrokUrl.replace('https://', '')}/media-stream" />
   </Connect>
 </Response>`.trim();
 
-  res.set('Content-Type', 'text/xml');
-  // Use res.status(200) to ensure we get a green checkmark in Twilio
-  return res.status(200).send(twiml);
-}Ï
+    res.set('Content-Type', 'text/xml');
+    return res.status(200).send(twiml);
+  }
 
   @Post('transfer-dial')
   async getTransferDial(@Res() res: any) {

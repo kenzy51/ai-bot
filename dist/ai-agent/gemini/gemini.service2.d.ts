@@ -18,7 +18,7 @@ export declare class GeminiService2 implements OnModuleInit {
     onModuleInit(): Promise<void>;
     makeOutboundCall(to: string): Promise<void>;
     private getGroqTools;
-    generateResponse(userText: string, history: any[], onAudioData: (buffer: Buffer) => void): Promise<string>;
+    generateResponse(userText: string, passedHistory: any[], onAudioData: (buffer: Buffer) => void): Promise<string>;
     transferCall(sid: string): Promise<void>;
     onCallDisconnect(): Promise<void>;
     private logToDatabase;

@@ -18,6 +18,7 @@ let VoiceGateway = class VoiceGateway {
     constructor(geminiService) {
         this.geminiService = geminiService;
     }
+    sessions = new Map();
     handleConnection(twilioWs) {
         console.log('🚀 Twilio connected. Initializing fresh session.');
         let chatHistory = [];
@@ -54,21 +55,38 @@ let VoiceGateway = class VoiceGateway {
                 console.log(`🤖 Jessica: ${aiResponse}`);
             }
         });
+        dgLive.on(sdk_1.LiveTranscriptionEvents.Error, (err) => {
+            console.error('❌ Deepgram Socket Error:', err);
+        });
         twilioWs.on('message', (data) => {
             const msg = JSON.parse(data);
             if (msg.event === 'start') {
                 streamSid = msg.start.streamSid;
-                this.geminiService.setCurrentCallSid(msg.start.callSid);
+                const callSid = msg.start.callSid;
+                this.sessions.set(twilioWs, callSid);
+                this.geminiService.setCurrentCallSid(callSid);
+                console.log(`📞 Call Started: ${callSid}`);
             }
             if (msg.event === 'media' && dgLive.getReadyState() === 1) {
                 dgLive.send(Buffer.from(msg.media.payload, 'base64'));
             }
-            if (msg.event === 'stop')
+            if (msg.event === 'stop') {
+                console.log('🛑 Twilio sent stop event');
                 dgLive.requestClose();
+            }
         });
     }
-    handleDisconnect() {
-        console.log('❌ Call ended');
+    async handleDisconnect(twilioWs) {
+        console.log('❌ WebSocket Disconnected');
+        const callSid = this.sessions.get(twilioWs);
+        if (callSid) {
+            console.log(`📊 Finalizing Log and Summary for: ${callSid}`);
+            await this.geminiService.onCallDisconnect();
+            this.sessions.delete(twilioWs);
+        }
+        else {
+            console.log('⚠️ Disconnect detected but no CallSid was found in session map.');
+        }
     }
 };
 exports.VoiceGateway = VoiceGateway;
