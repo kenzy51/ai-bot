@@ -1,9 +1,9 @@
 import { OnGatewayConnection, OnGatewayDisconnect } from '@nestjs/websockets';
-import { GeminiService2 } from '../gemini/gemini.service2';
+import { VoiceService } from '../gemini/voice.service';
 import * as WebSocket from 'ws';
 export declare class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     private readonly geminiService;
-    constructor(geminiService: GeminiService2);
+    constructor(geminiService: VoiceService);
     private chatHistories;
     private sessions;
     handleConnection(twilioWs: WebSocket): void;

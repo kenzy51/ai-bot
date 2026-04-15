@@ -10,15 +10,15 @@ exports.AiAgentModule = void 0;
 const common_1 = require("@nestjs/common");
 const voice_gateway_1 = require("./voice/voice.gateway");
 const calls_module_1 = require("../calls/calls.module");
-const gemini_service2_1 = require("./gemini/gemini.service2");
+const voice_service_1 = require("./gemini/voice.service");
 let AiAgentModule = class AiAgentModule {
 };
 exports.AiAgentModule = AiAgentModule;
 exports.AiAgentModule = AiAgentModule = __decorate([
     (0, common_1.Module)({
-        providers: [gemini_service2_1.GeminiService2, voice_gateway_1.VoiceGateway],
-        exports: [gemini_service2_1.GeminiService2],
-        imports: [calls_module_1.CallsModule]
+        providers: [voice_service_1.VoiceService, voice_gateway_1.VoiceGateway],
+        exports: [voice_service_1.VoiceService],
+        imports: [calls_module_1.CallsModule],
     })
 ], AiAgentModule);
 //# sourceMappingURL=ai-agent.module.js.map

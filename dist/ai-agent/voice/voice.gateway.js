@@ -11,7 +11,7 @@ var __metadata = (this && this.__metadata) || function (k, v) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.VoiceGateway = void 0;
 const websockets_1 = require("@nestjs/websockets");
-const gemini_service2_1 = require("../gemini/gemini.service2");
+const voice_service_1 = require("../gemini/voice.service");
 const sdk_1 = require("@deepgram/sdk");
 let VoiceGateway = class VoiceGateway {
     geminiService;
@@ -95,6 +95,6 @@ let VoiceGateway = class VoiceGateway {
 exports.VoiceGateway = VoiceGateway;
 exports.VoiceGateway = VoiceGateway = __decorate([
     (0, websockets_1.WebSocketGateway)({ path: '/media-stream' }),
-    __metadata("design:paramtypes", [gemini_service2_1.GeminiService2])
+    __metadata("design:paramtypes", [voice_service_1.VoiceService])
 ], VoiceGateway);
 //# sourceMappingURL=voice.gateway.js.map

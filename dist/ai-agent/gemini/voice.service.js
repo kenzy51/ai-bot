@@ -12,7 +12,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.GeminiService = void 0;
+exports.VoiceService = void 0;
 const common_1 = require("@nestjs/common");
 const sdk_1 = require("@deepgram/sdk");
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
@@ -22,7 +22,7 @@ const clinic_info_1 = require("./clinic-info");
 const elevenlabs_1 = require("elevenlabs");
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const calls_service_1 = require("../../calls/calls.service");
-let GeminiService = class GeminiService {
+let VoiceService = class VoiceService {
     callsService;
     deepgram;
     groq;
@@ -31,7 +31,6 @@ let GeminiService = class GeminiService {
     isProcessing = false;
     elevenlabs;
     lastAction = '';
-    chatHistory = [];
     callStatus = 'inquiry';
     isLogging = false;
     currentCallSid = '';
@@ -49,25 +48,26 @@ let GeminiService = class GeminiService {
         });
         this.calendar = googleapis_1.google.calendar({ version: 'v3', auth });
     }
+    setCurrentCallSid(sid) {
+        this.currentCallSid = sid;
+    }
     async onModuleInit() {
         console.log('🚀 Fusion AI Backend Started.');
     }
     async makeOutboundCall(to) {
-        const ngrokUrl = 'https://lesa-jovial-blushfully.ngrok-free.dev/leads/incoming-call';
         try {
             const call = await this.twilioClient.calls.create({
-                url: ngrokUrl,
+                url: `https://${process.env.SERVER_URL}/calls/incoming-call`,
                 to: to,
                 from: '+19297022797',
                 record: true,
-                recordingStatusCallback: 'https://lesa-jovial-blushfully.ngrok-free.dev/calls/recording-callback',
-                recordingStatusCallbackEvent: ['completed'],
+                recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
+                recordingStatusCallbackMethod: 'POST',
             });
-            this.currentCallSid = call.sid;
-            console.log(`📞 Calling: ${to} | SID: ${call.sid}`);
+            console.log(`📞 Call initiated: ${call.sid}`);
         }
         catch (error) {
-            console.error('❌ Twilio Error:', error);
+            console.error('❌ Call failed:', error);
         }
     }
     getGroqTools() {
@@ -103,15 +103,11 @@ let GeminiService = class GeminiService {
             },
         ];
     }
-    async generateResponse(userText, history) {
+    async generateResponse(userText, passedHistory, onAudioData) {
         if (this.isProcessing)
             return '';
         this.isProcessing = true;
-        const messages = [...history, { role: 'user', content: userText }];
-        this.chatHistory.push({ role: 'user', content: userText });
-        if (this.chatHistory.length > 12)
-            this.chatHistory.shift();
-        const leanHistory = this.chatHistory.slice(-6);
+        const leanHistory = passedHistory.slice(-10);
         const now = new Date();
         const nyTime = now.toLocaleString('en-US', {
             timeZone: 'America/New_York',
@@ -129,13 +125,19 @@ let GeminiService = class GeminiService {
                     {
                         role: 'system',
                         content: `
-# ROLE
-You are Jessica, a voice specialist at Tribeca Dental Studio. Time: ${nyTime}.
+            # ROLE
+You are Jessica, a AI specialist at Tribeca Dental Studio. Time: ${nyTime}.
+# FILLER PROTOCOL
+Start your response with a brief, natural filler if the user asks a question or makes a statement. 
+Examples: "Got it," "I see," "Sure thing," "Great question," "Let me check that."
+This reduces perceived latency.
 
 # CONTEXT (NightLase)
 - **What**: Non-invasive Fotona laser to tighten throat tissue/reduce snoring.
 - **Experience**: No needles, no anesthesia, no downtime.
 - **Cost**: Concierge evaluation is $49. (Full plan discussed later).
+- **Names**: Also known as "sleep laser," "snoring treatment," or "airway tightening."
+- **What**: Non-invasive Fotona laser... [rest of your prompt]
 
 # BOOKING PROTOCOL
 - **Inform**: Explain NightLase & the $49 eval.
@@ -145,6 +147,8 @@ You are Jessica, a voice specialist at Tribeca Dental Studio. Time: ${nyTime}.
 
 # VOICE RULES
 - **Length**: Strict <15 words per response.
+- **Tone**: Professional yet conversational. Use the fillers naturally, not every single time.
+- **Exception**: If asked about the "Team" or "Doctors", you may use up to 30 words to list the specialists from the KNOWLEDGE section.
 - **Greeting**: If they say 'Hello' again, say: "Hi there, how can I help you with NightLase today?"
 - **Closing**: Acknowledge "Thank you/Goodbye" and end call.
 - **Transfer**: If frustrated or asked, offer/call 'transfer_call'.
@@ -156,64 +160,63 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                 ],
                 tools: this.getGroqTools(),
                 tool_choice: 'auto',
-                temperature: 0,
+                temperature: 0.7,
+                stream: true,
             });
-            const message = response.choices[0]?.message;
-            let finalResponseText = message?.content || '';
-            let currentStatus = 'inquiry';
-            if (message?.tool_calls && message.tool_calls.length > 0) {
-                const toolCall = message.tool_calls[0];
-                const args = JSON.parse(toolCall.function.arguments);
-                if (toolCall.function.name === 'transfer_call') {
-                    finalResponseText =
-                        'Of course. Please hold one moment while I connect you to our office staff.';
-                    setTimeout(() => {
-                        this.transferCall(this.currentCallSid);
-                    }, 4000);
-                    this.callStatus = 'forwarded';
+            let fullContent = '';
+            let sentenceBuffer = '';
+            let speechQueue = Promise.resolve();
+            let firstChunkSent = false;
+            for await (const chunk of response) {
+                const content = chunk.choices[0]?.delta?.content || '';
+                if (content) {
+                    fullContent += content;
+                    sentenceBuffer += content;
+                    const words = sentenceBuffer.trim().split(/\s+/);
+                    if (!firstChunkSent && words.length >= 3) {
+                        const fillerChunk = sentenceBuffer.trim();
+                        sentenceBuffer = '';
+                        firstChunkSent = true;
+                        speechQueue = speechQueue.then(async () => {
+                            const audioBuffer = await this.speak(fillerChunk);
+                            onAudioData(audioBuffer);
+                            console.log(`⚡ FILLER SENT: ${fillerChunk}`);
+                        });
+                    }
+                    if (/[.!?]/.test(content)) {
+                        const trimmedBuffer = sentenceBuffer.trim();
+                        const isTitle = /\b(dr|mr|ms|mrs|st)\.$/i.test(trimmedBuffer);
+                        if (trimmedBuffer && !isTitle) {
+                            const speechOutput = trimmedBuffer;
+                            sentenceBuffer = '';
+                            firstChunkSent = true;
+                            speechQueue = speechQueue.then(async () => {
+                                const audioBuffer = await this.speak(speechOutput);
+                                onAudioData(audioBuffer);
+                                console.log(`🔊 Sent to Voice: ${speechOutput}`);
+                            });
+                        }
+                    }
                 }
-                if (toolCall.function.name === 'book_appointment') {
-                    const start = new Date(args.dateTime);
-                    if (start.getFullYear() < 2026)
-                        start.setFullYear(2026);
-                    const startTimeISO = start.toISOString();
-                    const existing = await this.calendar.events.list({
-                        calendarId: '6d380c70c92967c126387dba5367621b336c78f49a26e5ab7cfeaa7a99d6bc33@group.calendar.google.com',
-                        timeMin: startTimeISO,
-                        timeMax: new Date(start.getTime() + 60 * 60 * 1000).toISOString(),
-                        singleEvents: true,
-                    });
-                    if (existing.data.items.length > 0) {
-                        finalResponseText =
-                            'I just checked, and that slot is actually taken. Is there another time that works?';
-                    }
-                    else {
-                        await this.createCalendarEvent(args.procedure, startTimeISO);
-                        currentStatus = 'booked';
-                        this.callStatus = 'booked';
-                        const options = {
-                            weekday: 'long',
-                            month: 'long',
-                            day: 'numeric',
-                            hour: '2-digit',
-                            minute: '2-digit',
-                        };
-                        const fullTimeStr = start.toLocaleString('en-US', options);
-                        finalResponseText = `Perfect! I've booked your evaluation for ${fullTimeStr}. We'll see you then!`;
-                        this.handleNotifications(args.procedure, fullTimeStr, userText);
-                    }
+                const toolCall = chunk.choices[0]?.delta?.tool_calls?.[0];
+                if (toolCall?.function?.name === 'transfer_call') {
+                    await this.transferCall(this.currentCallSid);
+                    return 'Transferring you now.';
                 }
             }
-            if (finalResponseText) {
-                this.chatHistory.push({
-                    role: 'assistant',
-                    content: finalResponseText,
+            if (sentenceBuffer.trim()) {
+                const finalText = sentenceBuffer.trim();
+                speechQueue = speechQueue.then(async () => {
+                    const audioBuffer = await this.speak(finalText);
+                    onAudioData(audioBuffer);
+                    console.log(`🔊 Final Chunk Sent: ${finalText}`);
                 });
             }
-            return finalResponseText;
+            this.isProcessing = false;
+            return fullContent;
         }
         catch (err) {
-            console.error('❌ Groq/Logic Error:', err);
+            console.error('❌ Groq/Streaming Error:', err);
             return "I'm having a bit of trouble with my connection. Could you repeat that?";
         }
         finally {
@@ -224,7 +227,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
         try {
             console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);
             await this.twilioClient.calls(sid).update({
-                url: 'https://lesa-jovial-blushfully.ngrok-free.dev/calls/transfer-dial',
+                url: 'https://fusion-ai-bot.onrender.com/calls/transfer-dial',
                 method: 'POST',
             });
         }
@@ -232,18 +235,24 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
             console.error('❌ Twilio Transfer Error:', err);
         }
     }
-    async onCallDisconnect() {
+    async onCallDisconnect(finalHistory) {
         if (this.isLogging)
             return;
         this.isLogging = true;
         const sidToLog = this.currentCallSid;
-        await this.logToDatabase(this.callStatus, sidToLog);
+        await this.logToDatabase(this.callStatus, sidToLog, finalHistory);
+        const transcriptString = finalHistory
+            .map((h) => `<b>${h.role}:</b> ${h.content}`)
+            .join('<br>');
+        await this.handleNotifications('NightLase Inquiry', new Date().toLocaleString(), transcriptString);
+        this.currentCallSid = '';
+        this.callStatus = 'inquiry';
         this.isLogging = false;
     }
-    async logToDatabase(status, sid) {
+    async logToDatabase(status, sid, history) {
         try {
             let dbSummary = 'Inquiry about NightLase';
-            if (this.chatHistory.length >= 2) {
+            if (history.length >= 2) {
                 const sumResp = await this.groq.chat.completions.create({
                     model: 'llama-3.1-8b-instant',
                     messages: [
@@ -253,9 +262,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                         },
                         {
                             role: 'user',
-                            content: this.chatHistory
-                                .map((h) => `${h.role}: ${h.content}`)
-                                .join('\n'),
+                            content: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
                         },
                     ],
                 });
@@ -266,9 +273,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
                 patientPhone: '+19297696545',
                 callSid: sid,
                 summary: dbSummary,
-                transcript: this.chatHistory
-                    .map((h) => `${h.role}: ${h.content}`)
-                    .join('\n'),
+                transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
                 status: status,
                 procedure: 'NightLase',
             });
@@ -281,12 +286,11 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
     async handleNotifications(procedure, timeStr, userText) {
         try {
             await mail_1.default.send({
-                to: 'kanatnazarov51@gmail.com',
+                to: 'pr@nytds.com',
                 from: 'kanatnazarov.dev@gmail.com',
-                subject: `✅ New Booking: ${procedure}`,
-                html: `<p>New booking for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
+                subject: `Transwcipt of conversation: ${procedure}`,
+                html: `<p>New transcript for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
             });
-            console.log('📧 CEO Alert Sent');
         }
         catch (err) {
             console.error('❌ Email Failed');
@@ -311,7 +315,7 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
     }
     async speak(text) {
         try {
-            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000&optimize_streaming_latency=3`, {
+            const response = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/PBZ6PhGMbBIzGFQBGF5u/stream?output_format=ulaw_8000&optimize_streaming_latency=4`, {
                 method: 'POST',
                 headers: {
                     'xi-api-key': process.env.ELEVEN,
@@ -343,18 +347,20 @@ ${clinic_info_1.CLINIC_KNOWLEDGE}`,
             language: 'en-US',
             encoding: 'mulaw',
             sample_rate: 8000,
-            interim_results: false,
-            endpointing: 300,
+            interim_results: true,
             smart_format: true,
+            endpointing: 200,
+            vad_events: true,
+            keywords: ['NightLase:2', 'Fotona:2', 'Tribeca:1.5'],
         });
     }
     async getInitialGreeting() {
-        return 'Hello, This is Jessica. We Received your request in Nightlase Treatment today. How can i help you today?';
+        return 'Hello, This is Jessica.I Am an AI assistant. We Received your request in Nightlase Treatment today. How can i help you?';
     }
 };
-exports.GeminiService = GeminiService;
-exports.GeminiService = GeminiService = __decorate([
+exports.VoiceService = VoiceService;
+exports.VoiceService = VoiceService = __decorate([
     (0, common_1.Injectable)(),
     __metadata("design:paramtypes", [calls_service_1.CallsService])
-], GeminiService);
-//# sourceMappingURL=gemini.service.js.map
+], VoiceService);
+//# sourceMappingURL=voice.service.js.map

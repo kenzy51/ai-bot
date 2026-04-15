@@ -1,12 +1,12 @@
 import { Module } from '@nestjs/common';
-import { GeminiService } from './gemini/gemini.service';
+// import { GeminiService } from './gemini/gemini.service';
 import { VoiceGateway } from './voice/voice.gateway';
 import { CallsModule } from 'src/calls/calls.module';
-import { GeminiService2 } from './gemini/voice.service';
+import { VoiceService } from './gemini/voice.service';
 
 @Module({
-  providers: [GeminiService2, VoiceGateway],
-  exports: [GeminiService2],
+  providers: [VoiceService, VoiceGateway],
+  exports: [VoiceService],
   imports: [CallsModule],
 })
 export class AiAgentModule {}

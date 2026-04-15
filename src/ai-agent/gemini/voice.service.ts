@@ -102,12 +102,12 @@ export class VoiceService implements OnModuleInit {
 
   async generateResponse(
     userText: string,
-    passedHistory: any[], // Use the history passed from the Gateway
+    passedHistory: any[], 
     onAudioData: (buffer: Buffer) => void,
   ) {
     if (this.isProcessing) return '';
     this.isProcessing = true;
-    const leanHistory = passedHistory.slice(-10); // 1. Manage Chat History - Keep it lean to save tokens and improve AI focus
+    const leanHistory = passedHistory.slice(-10); 
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
       timeZone: 'America/New_York',
@@ -128,6 +128,10 @@ export class VoiceService implements OnModuleInit {
             content: `
             # ROLE
 You are Jessica, a AI specialist at Tribeca Dental Studio. Time: ${nyTime}.
+# FILLER PROTOCOL
+Start your response with a brief, natural filler if the user asks a question or makes a statement. 
+Examples: "Got it," "I see," "Sure thing," "Great question," "Let me check that."
+This reduces perceived latency.
 
 # CONTEXT (NightLase)
 - **What**: Non-invasive Fotona laser to tighten throat tissue/reduce snoring.
@@ -144,6 +148,7 @@ You are Jessica, a AI specialist at Tribeca Dental Studio. Time: ${nyTime}.
 
 # VOICE RULES
 - **Length**: Strict <15 words per response.
+- **Tone**: Professional yet conversational. Use the fillers naturally, not every single time.
 - **Exception**: If asked about the "Team" or "Doctors", you may use up to 30 words to list the specialists from the KNOWLEDGE section.
 - **Greeting**: If they say 'Hello' again, say: "Hi there, how can I help you with NightLase today?"
 - **Closing**: Acknowledge "Thank you/Goodbye" and end call.
@@ -156,12 +161,13 @@ ${CLINIC_KNOWLEDGE}`,
         ],
         tools: this.getGroqTools() as any,
         tool_choice: 'auto',
-        temperature: 0,
+        temperature: 0.7,
         stream: true,
       });
       let fullContent = '';
       let sentenceBuffer = '';
       let speechQueue = Promise.resolve();
+      let firstChunkSent = false;
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta?.content || '';
         // if (content) {
@@ -192,6 +198,18 @@ ${CLINIC_KNOWLEDGE}`,
         if (content) {
           fullContent += content;
           sentenceBuffer += content;
+          const words = sentenceBuffer.trim().split(/\s+/);
+          if (!firstChunkSent && words.length >= 3) {
+            const fillerChunk = sentenceBuffer.trim();
+            sentenceBuffer = '';
+            firstChunkSent = true;
+
+            speechQueue = speechQueue.then(async () => {
+              const audioBuffer = await this.speak(fillerChunk);
+              onAudioData(audioBuffer);
+              console.log(`⚡ FILLER SENT: ${fillerChunk}`);
+            });
+          }
 
           if (/[.!?]/.test(content)) {
             const trimmedBuffer = sentenceBuffer.trim();
@@ -200,19 +218,16 @@ ${CLINIC_KNOWLEDGE}`,
             if (trimmedBuffer && !isTitle) {
               const speechOutput = trimmedBuffer;
               sentenceBuffer = '';
+              firstChunkSent = true; // Ensure we don't trigger the filler logic again
 
-              // 2. CHAIN THE PROMISE
-              // This forces the code to wait for the previous 'speak' to finish
-              // its processing before starting the next one.
               speechQueue = speechQueue.then(async () => {
                 const audioBuffer = await this.speak(speechOutput);
                 onAudioData(audioBuffer);
-                console.log(`🔊 Sent to Voice (IN ORDER): ${speechOutput}`);
+                console.log(`🔊 Sent to Voice: ${speechOutput}`);
               });
             }
           }
         }
-        // Handle tool calls in a stream (Simplified for stability)
         const toolCall = chunk.choices[0]?.delta?.tool_calls?.[0];
         if (toolCall?.function?.name === 'transfer_call') {
           await this.transferCall(this.currentCallSid);

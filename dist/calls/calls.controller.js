@@ -21,7 +21,7 @@ let CallsController = class CallsController {
         this.callsService = callsService;
     }
     async handleIncoming(res) {
-        const ngrokUrl = 'https://lesa-jovial-blushfully.ngrok-free.dev';
+        const ngrokUrl = 'https://fusion-ai-bot.onrender.com';
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Start>
