@@ -112,11 +112,9 @@ export class VoiceService implements OnModuleInit {
     const nyTime = now.toLocaleString('en-US', {
       timeZone: 'America/New_York',
       weekday: 'long',
-      year: 'numeric',
-      month: 'long',
-      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit',
+      hour12: false, 
     });
 
     try {
@@ -128,10 +126,14 @@ export class VoiceService implements OnModuleInit {
             content: `
 # ROLE
 You are Jessica at Tribeca Dental Studio. Current NYC Time: ${nyTime}.
-# REAL-TIME LOGIC CHECK (CRITICAL)
-- If it is currently between 8:00 AM and 6:00 PM on a Weekday (Mon-Fri), we are OPEN.
-- If it is currently 5:53 PM, we are OPEN for 7 more minutes. 
-- RULE: Never tell a user we are closed if there are at least 5 minutes remaining. Say: "We are closing very soon, but I can take your info now!"
+# REAL-TIME CLOCK (Current NYC Time: ${nyTime})
+- If ${nyTime} is 18:00 or later (Weekdays) -> YOU ARE CLOSED.
+- If ${nyTime} is 16:00 or later (Weekends) -> YOU ARE CLOSED.
+- RULE: If closed, your first sentence must be: "Our office is actually closed right now as it's past 6:00 PM."
+
+# TOOL USE RULES (CRITICAL)
+- Do NOT call 'transfer_call' or 'book_appointment' unless the user EXPLICITLY asks to "speak to a person" or gives a "date and time."
+- For questions about "Implants" or "Prices," just answer using the KNOWLEDGE section. Do not trigger a function.
 
 # OFFICE HOURS & AVAILABILITY
 - Mon-Fri: 8am-6pm | Sat-Sun: 9am-4pm.
