@@ -128,23 +128,19 @@ export class VoiceService implements OnModuleInit {
             content: `
 # ROLE
 You are Jessica at Tribeca Dental Studio. Current NYC Time: ${nyTime}.
-# REAL-TIME LOGIC CHECK
-- Current Time: ${nyTime}
-- If User asks to come in "now" or "soon":
-    1. Check if current time is before 5:30 PM (Weekdays) or 3:30 PM (Weekends).
-    2. If YES: Say "We are still open for a bit, let me get your info."
-    3. If NO: Say "We are closing very soon/already closed, but I can take your info for the morning."
-- If User mentions "Friday":
-    1. Logic: Friday = Weekday. 
-    2. Rule: We are open 8 AM - 6 PM. Do NOT use weekend hours for Friday.
+# REAL-TIME LOGIC CHECK (CRITICAL)
+- If it is currently between 8:00 AM and 6:00 PM on a Weekday (Mon-Fri), we are OPEN.
+- If it is currently 5:53 PM, we are OPEN for 7 more minutes. 
+- RULE: Never tell a user we are closed if there are at least 5 minutes remaining. Say: "We are closing very soon, but I can take your info now!"
+
 # OFFICE HOURS & AVAILABILITY
 - Mon-Fri: 8am-6pm | Sat-Sun: 9am-4pm.
 - If it's currently outside these hours based on ${nyTime}, acknowledge the office is closed but offer to take their info.
 
-# FILLER PROTOCOL
-- Only use a filler (e.g., "Got it," "Sure") if the user asks a complex question. 
-- Do NOT use fillers or "Unfortunately" for simple status updates or greetings. 
-- Keep acknowledgments natural.
+# FILLER & TONE RULES
+- DO NOT use "Mhm" or "I see" every time. It sounds robotic.
+- If the user asks "Can I come now?", check the clock. If open, say: "We close at 6:00 PM, so you'd have to be very fast, or I can note you down for tomorrow morning."
+- **NO HANGUPS**: Always end your response with a question to keep the patient talking (e.g., "Does that work for you?").
 
 # THE SALES MISSION
 1. **The Anchor**: Explain we do a Comprehensive Airway Evaluation (Value: $750).
@@ -175,23 +171,43 @@ ${CLINIC_KNOWLEDGE}`,
       let fullContent = '';
       let sentenceBuffer = '';
       let speechQueue = Promise.resolve();
+      const fastFillers = [
+        'got it',
+        'sure thing',
+        'i see',
+        'great question',
+        'sure',
+      ];
       let firstChunkSent = false;
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta?.content || '';
         if (content) {
           fullContent += content;
           sentenceBuffer += content;
+          // 1. FAST FILLER TRIGGER (Smoother)
           const words = sentenceBuffer.trim().split(/\s+/);
-          if (!firstChunkSent && words.length >= 3) {
-            const fillerChunk = sentenceBuffer.trim();
-            sentenceBuffer = '';
-            firstChunkSent = true;
+          if (!firstChunkSent) {
+            const currentBuffer = sentenceBuffer.toLowerCase().trim();
 
-            speechQueue = speechQueue.then(async () => {
-              const audioBuffer = await this.speak(fillerChunk);
-              onAudioData(audioBuffer);
-              console.log(`⚡ FILLER SENT: ${fillerChunk}`);
-            });
+            // Check if the AI has started with one of our "clean" fillers
+            const matchingFiller = fastFillers.find((f) =>
+              currentBuffer.startsWith(f),
+            );
+
+            if (matchingFiller) {
+              const fillerToSpeak = matchingFiller;
+              // Remove the filler from the buffer so it's not repeated in the next chunk
+              sentenceBuffer = sentenceBuffer
+                .substring(matchingFiller.length)
+                .trim();
+              firstChunkSent = true;
+
+              speechQueue = speechQueue.then(async () => {
+                const audioBuffer = await this.speak(fillerToSpeak);
+                onAudioData(audioBuffer);
+                console.log(`⚡ INSTANT FILLER: ${fillerToSpeak}`);
+              });
+            }
           }
 
           if (/[.!?]/.test(content)) {
