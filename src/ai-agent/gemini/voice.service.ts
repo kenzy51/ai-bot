@@ -102,12 +102,12 @@ export class VoiceService implements OnModuleInit {
 
   async generateResponse(
     userText: string,
-    passedHistory: any[], 
+    passedHistory: any[],
     onAudioData: (buffer: Buffer) => void,
   ) {
     if (this.isProcessing) return '';
     this.isProcessing = true;
-    const leanHistory = passedHistory.slice(-10); 
+    const leanHistory = passedHistory.slice(-10);
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
       timeZone: 'America/New_York',
@@ -126,33 +126,32 @@ export class VoiceService implements OnModuleInit {
           {
             role: 'system',
             content: `
-            # ROLE
-You are Jessica, a AI specialist at Tribeca Dental Studio. Time: ${nyTime}.
+# ROLE
+You are Jessica at Tribeca Dental Studio. Current NYC Time: ${nyTime}.
+
+# OFFICE HOURS & AVAILABILITY
+- Mon-Fri: 8am-6pm | Sat-Sun: 9am-4pm.
+- If it's currently outside these hours based on ${nyTime}, acknowledge the office is closed but offer to take their info.
+
 # FILLER PROTOCOL
-Start your response with a brief, natural filler if the user asks a question or makes a statement. 
-Examples: "Got it," "I see," "Sure thing," "Great question," "Let me check that."
-This reduces perceived latency.
+- Start responses with: "Got it," "I see," "Sure thing," "Great question" "Mhm,".
+- This is critical to reduce perceived latency.
 
-# CONTEXT (NightLase)
-- **What**: Non-invasive Fotona laser to tighten throat tissue/reduce snoring.
+# THE SALES MISSION
+1. **The Anchor**: Explain we do a Comprehensive Airway Evaluation (Value: $750).
+2. **The Special**: For new patients, it's only $49 USD (Must be prepaid).
+3. **The Risk**: "You can reschedule, but no-shows are responsible for the full $750 fee."
+4. **The Handoff**: If they want to book, say: "I'll pass this to our team. They'll contact you shortly to send the patient forms."
+
+# CONTEXT: NIGHTLASE
+- **What**: Non-invasive Fotona laser to tighten throat tissue and reduce snoring.
 - **Experience**: No needles, no anesthesia, no downtime.
-- **Cost**: Concierge evaluation is $49. (Full plan discussed later).
-- **Names**: Also known as "sleep laser," "snoring treatment," or "airway tightening."
-- **What**: Non-invasive Fotona laser... [rest of your prompt]
-
-# BOOKING PROTOCOL
-- **Inform**: Explain NightLase & the $49 eval.
-- **Qualify**: Ask to schedule ONLY if they show interest.
-- **Book**: Call 'book_appointment' ONLY if a specific DAY and TIME (e.g., "Tuesday at 2pm") is provided.
-- **Vague**: If time is missing, ask: "What day and time works best?" Never guess.
+- **Goal**: Ask to schedule ONLY if they show interest.
 
 # VOICE RULES
-- **Length**: Strict <15 words per response.
-- **Tone**: Professional yet conversational. Use the fillers naturally, not every single time.
-- **Exception**: If asked about the "Team" or "Doctors", you may use up to 30 words to list the specialists from the KNOWLEDGE section.
-- **Greeting**: If they say 'Hello' again, say: "Hi there, how can I help you with NightLase today?"
-- **Closing**: Acknowledge "Thank you/Goodbye" and end call.
-- **Transfer**: If frustrated or asked, offer/call 'transfer_call'.
+- **Length**: Strict <15 words per response (keep it punchy!).
+- **Closing**: Acknowledge "Thank you/Goodbye" and end the call.
+- **Doctors**: Only list specialists from KNOWLEDGE if explicitly asked (max 30 words).
 
 # KNOWLEDGE
 ${CLINIC_KNOWLEDGE}`,
@@ -170,31 +169,6 @@ ${CLINIC_KNOWLEDGE}`,
       let firstChunkSent = false;
       for await (const chunk of response) {
         const content = chunk.choices[0]?.delta?.content || '';
-        // if (content) {
-        //   fullContent += content;
-        //   sentenceBuffer += content;
-
-        //   // Check if the current chunk contains sentence-ending punctuation
-        //   if (/[.!?]/.test(content)) {
-        //     const trimmedBuffer = sentenceBuffer.trim();
-
-        //     // REGEX EXPLAINED:
-        //     // This looks at the buffer and checks if it ends with "Dr." or "Mr."
-        //     // (case insensitive). If it does, we DO NOT speak yet.
-        //     const isTitle = /\b(dr|mr|ms|mrs|st)\.$/i.test(trimmedBuffer);
-
-        //     if (trimmedBuffer && !isTitle) {
-        //       const speechOutput = trimmedBuffer;
-        //       sentenceBuffer = ''; // Clear the buffer for the next sentence
-
-        //       this.speak(speechOutput).then((audioBuffer) => {
-        //         onAudioData(audioBuffer);
-        //         console.log(`🔊 Sent to Voice: ${speechOutput}`);
-        //       });
-        //     }
-        //   }
-        // }
-
         if (content) {
           fullContent += content;
           sentenceBuffer += content;
@@ -409,13 +383,13 @@ ${CLINIC_KNOWLEDGE}`,
       sample_rate: 8000,
       interim_results: true,
       smart_format: true,
-      endpointing: 200,
+      endpointing: 100,
       vad_events: true,
       keywords: ['NightLase:2', 'Fotona:2', 'Tribeca:1.5'],
     });
   }
 
   async getInitialGreeting(): Promise<string> {
-    return 'Hello, This is Jessica.I Am an AI assistant. We Received your request in Nightlase Treatment today. How can i help you?';
+    return 'Hello, This is Jessica.Are you interested in Nightlase Treatment today. How can i help you?';
   }
 }

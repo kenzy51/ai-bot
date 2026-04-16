@@ -10,7 +10,13 @@ Tribeca Dental Studio Detailed Knowledge Base:
 - Operating Hours:
   * Monday - Friday: 8:00 AM - 6:00 PM.
   * Saturday & Sunday: 9:00 AM - 4:00 PM (Yes, we are open on weekends!).
-
+# AIRWAY EVALUATION & NIGHTLASE SCRIPT:
+- **The Value**: We provide a Comprehensive Airway Evaluation valued at $750.
+- **The Offer**: For new patients, we offer this for only $49 USD (Prepaid).
+- **Payment Policy**: The $49 is a prepaid fee. 
+- **Rescheduling**: Patients can reschedule, but must do so in advance.
+- **No-Show Policy**: If a patient is a "No Show," they are responsible for the full $750 fee.
+- **Next Steps**: Once the $49 is paid, a Patient Coordinator will call the patient back to finalize everything.
 - The Team (Specialists under one roof):
   * Dr. Nina Izhaky (Owner, Cosmetic & General Dentist).
   * Dr. Sam Morhaim (Periodontist, Implants & Surgical).
@@ -33,6 +39,5 @@ Tribeca Dental Studio Detailed Knowledge Base:
   PHILOSOPHY:
 - We provide a "Specialists Under One Roof" model, so patients don't need to be referred out for surgery, implants, or braces.
 - It's a boutique, high-end experience with state-of-the-art technology.
-
+* Clarification: The $49 covers the evaluation only; the full treatment plan cost is discussed after the exam.
 `;
-
