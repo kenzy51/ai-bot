@@ -130,6 +130,15 @@ let VoiceService = class VoiceService {
 # ROLE
 You are Sarah, a Logistics Coordinator at TRT International.
 
+# THE 3-SENTENCE RULE
+1. Answer the user's specific question using the KNOWLEDGE BASE.
+2. If the question is about pricing, tracking, or drop-offs, give the phone number: 973-344-7100.
+3. End with a question like "Would you like me to transfer you to a specialist?" or "Do you have the container number handy?"
+
+# CRITICAL CONSTRAINTS
+- NEVER repeat the same fact twice in one call.
+- Be concise. If the user is silent, do not keep talking.
+- If you don't know a specific price, say: "Rates vary by route and cargo size. Let me get a sales manager on the line at extension 221 to give you an exact quote."
 # REAL-TIME CLOCK
 Current NYC time: ${nyTime}
 
@@ -247,25 +256,25 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             return;
         this.isLogging = true;
         const sidToLog = this.currentCallSid;
-        await this.logToDatabase(this.callStatus, sidToLog, finalHistory);
+        await this.logToDatabase('inquiry', sidToLog, finalHistory);
         const transcriptString = finalHistory
             .map((h) => `<b>${h.role}:</b> ${h.content}`)
             .join('<br>');
-        await this.handleNotifications('NightLase Inquiry', new Date().toLocaleString(), transcriptString);
+        await this.handleNotifications('Inquiry', new Date().toLocaleString(), transcriptString);
         this.currentCallSid = '';
         this.callStatus = 'inquiry';
         this.isLogging = false;
     }
     async logToDatabase(status, sid, history) {
         try {
-            let dbSummary = 'Inquiry about NightLase';
+            let dbSummary = 'Inquiry TRT';
             if (history.length >= 2) {
                 const sumResp = await this.groq.chat.completions.create({
                     model: 'llama-3.1-8b-instant',
                     messages: [
                         {
                             role: 'system',
-                            content: 'Summarize this dental call in one short sentence.',
+                            content: 'Summarize this call in one short sentence.',
                         },
                         {
                             role: 'user',
@@ -276,13 +285,13 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
                 dbSummary = sumResp.choices[0]?.message?.content || dbSummary;
             }
             await this.callsService.saveCall({
-                businessId: 'tribeca-dental-studio',
+                businessId: 'trt-international',
                 patientPhone: '+19297696545',
                 callSid: sid,
                 summary: dbSummary,
                 transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
                 status: status,
-                procedure: 'NightLase',
+                procedure: 'Logistics Inquiry',
             });
             console.log(`✅ DB Updated: ${status}`);
         }
@@ -295,7 +304,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             await mail_1.default.send({
                 to: 'pr@nytds.com',
                 from: 'kanatnazarov.dev@gmail.com',
-                subject: `Transwcipt of conversation: ${procedure}`,
+                subject: `Transcript of conversation: ${procedure}`,
                 html: `<p>New transcript for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
             });
         }
@@ -306,7 +315,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
     async createCalendarEvent(procedure, finalStartTime) {
         const calendarId = '6d380c70c92967c126387dba5367621b336c78f49a26e5ab7cfeaa7a99d6bc33@group.calendar.google.com';
         const event = {
-            summary: `Megan Booking: ${procedure || 'NightLase Eval'}`,
+            summary: `${procedure || 'Conversation'}`,
             description: `AI Lead via Fusion AI Agency`,
             start: { dateTime: finalStartTime, timeZone: 'America/New_York' },
             end: {
@@ -358,7 +367,16 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             smart_format: true,
             endpointing: 100,
             vad_events: true,
-            keywords: ['NightLase:2', 'Fotona:2', 'Tribeca:1.5'],
+            keywords: [
+                'TRT International:2',
+                'Newark:1.5',
+                'Drayage:2',
+                'Port Newark:1.5',
+                'Savannah:1.5',
+                'RGN:2',
+                'Lowboy:2',
+                'freight:1.2',
+            ],
         });
     }
     async getInitialGreeting() {

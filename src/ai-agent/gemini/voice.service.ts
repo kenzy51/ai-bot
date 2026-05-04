@@ -265,8 +265,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
 
     const sidToLog = this.currentCallSid;
 
-    await this.logToDatabase(this.callStatus, sidToLog, finalHistory);
-
+    await this.logToDatabase('inquiry', sidToLog, finalHistory);
     const transcriptString = finalHistory
       .map((h) => `<b>${h.role}:</b> ${h.content}`)
       .join('<br>');

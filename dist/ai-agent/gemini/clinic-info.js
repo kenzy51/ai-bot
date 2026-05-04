@@ -2,33 +2,43 @@
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.TRT_LOGISTICS_KNOWLEDGE = void 0;
 exports.TRT_LOGISTICS_KNOWLEDGE = `
-TRT International Detailed Knowledge Base:
-- Name: TRT International (Leader in end-to-end logistics for over 30 years).
-- Headquarters: Newark, New Jersey (Just minutes from major terminals).
-- Other Locations: Savannah (GA), Miami (FL), Houston (TX), Los Angeles (CA), and Seattle (WA).
+# TRT INTERNATIONAL - FULL KNOWLEDGE BASE
 
-# LOGISTICS CAPABILITIES:
-- **Tone**: Professional, reliable, and expert (Industry-leading logistics).
-- **Core Services**: Bonded Container Freight Station (CFS), oversize/overweight transportation, local drayage, ocean & air freight, auto shipping, warehousing, and shrink wrapping/crating.
-- **Warehousing**: 150,000+ sq. ft. in Port Newark and 350,000+ sq. ft. in Savannah (short-term and extended storage).
-- **Specialty**: Heavy machinery and project cargo. Equipped with 120,000 lbs lifting capacity handlers and 80+ heavy-duty forklifts.
+# 1. COMPANY OVERVIEW
+- **Legacy**: 30+ years as a global leader in end-to-end logistics.
+- **Licensing**: Fully licensed freight forwarding company.
+- **Expertise**: International shipping, US domestic trucking, and heavy project cargo.
+- **Key Markets**: Specialized in heavy machinery, oversized equipment, and vehicle relocation.
 
-# THE QUOTE PROCESS:
-- **Step 1 (Inquiry)**: We need US departure port, destination port, quantity of goods, and if inland trucking to our warehouse is needed.
-- **Step 2 (Sales Team)**: Contact the sales manager at 973-344-7100 ext. 221 or email drayage@usatrt.com.
-- **Step 3 (Account Setup)**: New clients need to provide a New Client Form, Power of Attorney, and a copy of their passport.
+# 2. LOCATIONS & INFRASTRUCTURE
+- **Port Newark, NJ (HQ)**: 150,000 sq. ft. of total warehouse space (including a 30k sq. ft. facility inside the port zone). Minutes from all major terminals.
+- **Savannah, GA**: 350,000 sq. ft. of warehouse capacity for short-term and extended storage.
+- **Other Hubs**: Miami (FL), Houston (TX), Los Angeles (CA), and Seattle (WA).
 
-# TECHNICAL DETAILS (OVERSIZE & TRACKING):
-- **Oversize Criteria**: Shipments over 8.5ft wide, 13.5ft high, or 80,000 lbs.
-- **Tracking**: Customers can track vehicles or containers by calling 973-344-7100 or emailing drayage@usatrt.com with their container number.
-- **Equipment**: RGN’s, lowboys, perimeter deck trailers, and double drops available.
+# 3. SERVICE PORTFOLIO
+- **Ocean & Air Freight**: End-to-end international solutions to any destination worldwide.
+- **Drayage**: Reliable local trucking across the Tri-State area (NY, NJ, CT), Eastern Pennsylvania, and Port of Savannah.
+- **Warehousing**: Bonded Container Freight Station (CFS), inventory management, and transloading.
+- **Specialized Handling**: Professional shrink-wrapping and custom crating for high-value or fragile cargo.
 
-# OPERATING HOURS (EST):
-- WEEKDAYS: 8:00 AM - 6:00 PM.
-- WEEKENDS: 9:00 AM - 4:00 PM (Limited Support).
+# 4. HEAVY HAUL & OVERSIZE SPECS
+- **Oversize Limits**: Anything exceeding 8.5ft wide, 13.5ft high, or 80,000 pounds. 
+- **Equipment Capacity**: State-of-the-art container handlers with 120,000 pounds lifting capacity.
+- **Forklift Fleet**: 80+ units ranging from 20,000 to 80,000 pounds capacity.
+- **Trailer Inventory**: RGNs (Removable Gooseneck), Lowboys, Perimeter Deck Trailers, and Double Drops.
 
-# INSURANCE & CUSTOMS:
-- **Insurance**: Highly recommended. Two main types: "Full Coverage" (car, dents, scratches) and "Total Loss" (value of vehicle only).
-- **Customs**: We assign a foreign agent to assist with international duties and relocation laws.
+# 5. ACCOUNT & LOGISTICS PROTOCOLS
+- **New Clients**: Must sign/submit: (1) New Client Form, (2) Power of Attorney, and (3) a copy of a Passport.
+- **Pricing Logic**: Quotes require: Origin port, Destination port, Quantity of goods, and Inland transport needs.
+- **Tracking**: Advanced internal system. Customers should call with their container or vehicle VIN.
+- **Insurance**: Marine insurance is strongly advised. 
+    * "Full Coverage": Covers car cost, dents, scratches, and shipping.
+    * "Total Loss": Replaces vehicle value only.
+- **Customs Assistance**: We assign a foreign agent to help with duties, receipts, and local laws at the destination.
+
+# 6. CONTACT & DROP-OFFS
+- **Main Office**: 973-344-7100 (Sales ext. 221).
+- **Email**: drayage@usatrt.com.
+- **Drop-off Policy**: Users must notify us of the state they are transporting from/to before arriving. Call +1 973-344-7100.
 `;
 //# sourceMappingURL=clinic-info.js.map
