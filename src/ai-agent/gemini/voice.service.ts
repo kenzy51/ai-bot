@@ -246,7 +246,6 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       this.isProcessing = false;
     }
   }
-  // Add this method to GeminiService
   async transferCall(sid: string) {
     try {
       console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);
@@ -273,7 +272,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       .join('<br>');
 
     await this.handleNotifications(
-      'NightLase Inquiry',
+      'Inquiry',
       new Date().toLocaleString(),
       transcriptString,
     );
@@ -287,7 +286,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
   // HELPER: Handles DB Saving and Dynamic Summary
   private async logToDatabase(status: string, sid: string, history: any[]) {
     try {
-      let dbSummary = 'Inquiry about NightLase';
+      let dbSummary = 'Inquiry TRT';
 
       // Generate summary only if there's enough dialogue
       if (history.length >= 2) {
