@@ -4,7 +4,7 @@ import { DeepgramClient, createClient } from '@deepgram/sdk';
 import Groq from 'groq-sdk';
 import { google } from 'googleapis';
 import twilio from 'twilio';
-import { CLINIC_KNOWLEDGE } from './clinic-info';
+import { TRT_LOGISTICS_KNOWLEDGE } from './clinic-info';
 import { ElevenLabsClient } from 'elevenlabs';
 import sgMail from '@sendgrid/mail';
 import { CallsService } from 'src/calls/calls.service';
@@ -67,33 +67,31 @@ export class VoiceService implements OnModuleInit {
       {
         type: 'function',
         function: {
-          name: 'transfer_call',
+          name: 'transfer_to_sales',
           description:
-            'Transfers the caller to a human representative at the dental office.',
+            'Transfers the caller to a sales representative for a custom quote or account setup.',
           parameters: { type: 'object', properties: {} },
         },
       },
       {
         type: 'function',
-
         function: {
-          name: 'book_appointment',
+          name: 'schedule_logistics_consult',
           description:
-            'Schedules a dental appointment. ONLY call this if the user EXPLICITLY mentions a time AND day. NEVER call this for general questions, greetings, or unclear statements.',
+            'Schedules a follow-up call with a logistics expert. ONLY call this if the user gives a specific time.',
           parameters: {
             type: 'object',
             properties: {
-              procedure: {
+              cargoType: {
                 type: 'string',
-                description: 'Type of treatment (e.g., NightLase)',
+                description: 'Type of cargo (e.g. Oversize machinery, Vehicle)',
               },
               dateTime: {
                 type: 'string',
-                description:
-                  'The date and time for the appointment in America/New_York (EST) timezone. Use ISO 8601 format: YYYY-MM-DDTHH:mm:ss. Example: 2026-02-15T16:00:00',
+                description: 'ISO 8601 format: YYYY-MM-DDTHH:mm:ss',
               },
             },
-            required: ['procedure', 'dateTime'],
+            required: ['cargoType', 'dateTime'],
           },
         },
       },
@@ -119,7 +117,7 @@ export class VoiceService implements OnModuleInit {
       minute: '2-digit',
       hour12: true,
     });
-    const isWeekday = [0, 1, 2, 3, 4].includes(now.getDay()); // better than weekday string sometimes
+    const isWeekday = [0, 1, 2, 3, 4].includes(now.getDay());
     try {
       const response = await this.groq.chat.completions.create({
         model: 'llama-3.1-8b-instant',
@@ -128,51 +126,26 @@ export class VoiceService implements OnModuleInit {
             role: 'system',
             content: `
 # ROLE
-You are Jessica at Tribeca Dental Studio.
+You are Sarah, a Logistics Coordinator at TRT International.
 
-# REAL-TIME CLOCK (Critical)
+# REAL-TIME CLOCK
 Current NYC time: ${nyTime}
-Is today a weekday? ${isWeekday ? 'YES' : 'NO'}
 
 # OFFICE HOURS
-- Monday to Friday: 8:00 AM – 6:00 PM
-- Saturday & Sunday: 9:00 AM – 4:00 PM
+- Mon-Fri: 8:00 AM – 6:00 PM | Sat-Sun: 9:00 AM – 4:00 PM
 
-# CURRENT STATUS
-- If BEFORE closing time → We are **OPEN**
-- If AFTER closing time → We are **CLOSED**
+# RESPONSE RULES
+- Be professional, efficient, and knowledgeable about global shipping.
+- For services: Start with "Absolutely, TRT handles that!" or "We specialize in exactly that."
+- **Logistics Pivot**: After answering a general question, pivot to the quote: "To give you an accurate rate, would you like me to have a sales manager contact you for a custom quote?"
+- Keep it conversational. Do not list everything at once unless asked.
 
-# AVAILABILITY RULES (Follow these strictly - highest priority)
-
-When the user says they want to come "now", "in 10 minutes", "in one hour", "today", "as soon as possible", etc.:
-
-- If we are currently OPEN:
-  → Start with: "We're actually open right now."
-  → Politely warn about closing time only if less than 2 hours left.
-  → Example at 10:43 AM: "We're actually open right now. We close at 6:00 PM today, so you'd have to be fairly quick. Would you like to come in today or would tomorrow morning work better?"
-
-- If we are CLOSED:
-  → First sentence MUST be exactly: "Our office is actually closed right now as it's past 6:00 PM."
-
-Never say "you'd have to be very fast" or "closing soon" when there are many hours left (e.g. at 10 AM or 11 AM).
-
-# GENERAL RESPONSE RULES
-- Always be friendly, professional and helpful.
-- For any dental service question: Start with "Absolutely!" or "We certainly do!"
-- After answering a non-airway question, gently pivot: "By the way, along with our standard care, we’re also checking all our patients' airways..."
-- Always end your response with a question to keep the conversation going.
-- Keep responses natural and conversational (not robotic). Do not make them extremely short.
-
-# TOOL USE RULES
-- Do NOT call 'transfer_call' or 'book_appointment' unless the user clearly wants to speak to a human or gives a specific date + time.
-- For prices or specific treatments: Do not guess. Offer an evaluation.
-
-# SALES MISSION (Airway Evaluation)
-- We offer a Comprehensive Airway Evaluation (normally $750). New patients can get it for only $49 (must be prepaid).
-- If interested: "I'll pass this to our team. They'll contact you shortly to send the patient forms."
+# SALES MISSION
+- Our goal is to collect shipment details (Port of Origin, Destination, Cargo Type).
+- If they are ready for a quote: "I'll have our sales team reach out to you immediately to finalize the rates for your shipment."
 
 # KNOWLEDGE
-${CLINIC_KNOWLEDGE}
+${TRT_LOGISTICS_KNOWLEDGE}
 `,
           },
           ...leanHistory,
@@ -429,6 +402,6 @@ ${CLINIC_KNOWLEDGE}
   }
 
   async getInitialGreeting(): Promise<string> {
-    return 'Hello, This is Jessica.Are you interested in Nightlase Treatment today. How can i help you?';
+    return 'Hello, this is Sarah with TRT International. Are you looking to move freight or check on a shipment today?';
   }
 }

@@ -1,59 +1,34 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CLINIC_KNOWLEDGE = void 0;
-exports.CLINIC_KNOWLEDGE = `
-Tribeca Dental Studio Detailed Knowledge Base:
-- Name: Tribeca Dental Studio (Boutique dental practice in Lower Manhattan).
-- Address: 54 Warren St, New York, NY 10007.
+exports.TRT_LOGISTICS_KNOWLEDGE = void 0;
+exports.TRT_LOGISTICS_KNOWLEDGE = `
+TRT International Detailed Knowledge Base:
+- Name: TRT International (Leader in end-to-end logistics for over 30 years).
+- Headquarters: Newark, New Jersey (Just minutes from major terminals).
+- Other Locations: Savannah (GA), Miami (FL), Houston (TX), Los Angeles (CA), and Seattle (WA).
 
-# THE NIGHTLASE JOURNEY:
-- **Tone**: Lovely, Wonderful, Absolutely! (Warm and boutique).
-- **Step 1 (The Consult)**: A 1-hour comprehensive visit for $49 (Prepaid). Includes an iTero 3D scan to create a digital image of the teeth and palate.
-- **Step 2 (The Diagnostic)**: Typically, a full diagnostic work-up is recommended ($700). This includes a CBCT scan to evaluate the facial structure and, most importantly, the airway.
-- **Step 3 (The Science)**: NightLase uses a gentle warming laser (no needles!) to tighten throat tissue and open the airway.
-- **The Big Win**: All fees paid for records ($749 total) are applied as a **CREDIT** toward the total treatment cost once the patient is ready to start.
+# LOGISTICS CAPABILITIES:
+- **Tone**: Professional, reliable, and expert (Industry-leading logistics).
+- **Core Services**: Bonded Container Freight Station (CFS), oversize/overweight transportation, local drayage, ocean & air freight, auto shipping, warehousing, and shrink wrapping/crating.
+- **Warehousing**: 150,000+ sq. ft. in Port Newark and 350,000+ sq. ft. in Savannah (short-term and extended storage).
+- **Specialty**: Heavy machinery and project cargo. Equipped with 120,000 lbs lifting capacity handlers and 80+ heavy-duty forklifts.
 
-# EXACT OPERATING HOURS (NYC TIME):
-- WEEKDAYS (Monday, Tuesday, Wednesday, Thursday, Friday): 8:00 AM - 6:00 PM.
-- WEEKENDS (Saturday, Sunday): 9:00 AM - 4:00 PM.
-* LOGIC CHECK: Friday is a WEEKDAY. If it is before 6:00 PM on a Friday, we are OPEN.
-* LOGIC CHECK: If the current time is within 30 minutes of closing, tell the user we are closing soon but can still help.
+# THE QUOTE PROCESS:
+- **Step 1 (Inquiry)**: We need US departure port, destination port, quantity of goods, and if inland trucking to our warehouse is needed.
+- **Step 2 (Sales Team)**: Contact the sales manager at 973-344-7100 ext. 221 or email drayage@usatrt.com.
+- **Step 3 (Account Setup)**: New clients need to provide a New Client Form, Power of Attorney, and a copy of their passport.
 
-# WHAT IS NIGHTLASE? (EXPLAINED)
-- **Concept**: A non-invasive, patient-friendly laser treatment for increasing the quality of a patient's sleep.
-- **The Science**: It uses gentle, superficial Fotona laser light to tighten the oral mucosa tissue in the back of the throat.
-- **How it Works**: The laser light causes a "tightening" effect by stimulating collagen contraction in the throat. This opens up the airway and significantly reduces snoring and the effects of sleep apnea.
-- **The Experience**:
-  * No needles, no anesthesia, and no surgery.
-  * No downtime—patients can eat, drink, and talk immediately after the session.
-  * Feels like a gentle warming sensation in the back of the throat.
-- **Results**: Usually requires a series of 3 short sessions. Results can last up to a year, and the treatment can be repeated.
+# TECHNICAL DETAILS (OVERSIZE & TRACKING):
+- **Oversize Criteria**: Shipments over 8.5ft wide, 13.5ft high, or 80,000 lbs.
+- **Tracking**: Customers can track vehicles or containers by calling 973-344-7100 or emailing drayage@usatrt.com with their container number.
+- **Equipment**: RGN’s, lowboys, perimeter deck trailers, and double drops available.
 
-# AIRWAY EVALUATION & NIGHTLASE SCRIPT:
-- **Value**: Comprehensive Airway Evaluation (Valued at $750).
-- **The Evaluation**: This is where we measure the airway using 3D scanning to see if you are a candidate for NightLase.
-- **Offer**: New patient special for $49 USD (Must be Prepaid).
-- **Policy**: Rescheduling is allowed. No-shows are responsible for the full $750 fee.
-- **Clarification**: The $49 covers the evaluation and 3D airway scan only. The full 3-session treatment cost is discussed after the exam.
-- **Next Step**: After payment, a Patient Coordinator calls to finalize the booking.
+# OPERATING HOURS (EST):
+- WEEKDAYS: 8:00 AM - 6:00 PM.
+- WEEKENDS: 9:00 AM - 4:00 PM (Limited Support).
 
-# THE TEAM (Specialists Under One Roof):
-- Dr. Nina Izhaky (Cosmetic/General)
-- Dr. Sam Morhaim (Implants/Surgical - Gentle touch expert)
-- Dr. Igor Chikunov & Dr. Claire Kim (Prosthodontists)
-- Dr. Lisa Schneider & Dr. Rachel Iospa (Board-Certified Pediatric)
-- Dr. Reem Abdulrahman & Dr. Reena Clarkson (Orthodontists)
-
-# GENERAL SERVICES (If they ask about other things):
-- **Specialists Under One Roof**: We have experts for everything. No need to go elsewhere.
-- **Pediatric**: Board-certified kids' dentists (Netflix/Disney+ on ceilings).
-- **Cosmetic**: Veneers, Smile Design, and Teeth Whitening.
-- **Surgery/Implants**: Dr. Sam Morhaim is our surgical expert (gentle touch).
-- **Orthodontics**: Invisalign and braces with Dr. Reem.
-- **General**: Cleanings, X-rays, and Fillings.
-  
-# PHILOSOPHY:
-- We use 3D digital scanning and painless laser dentistry (LANAP).
-- Boutique experience. Specialists under one roof so patients are never referred out.
+# INSURANCE & CUSTOMS:
+- **Insurance**: Highly recommended. Two main types: "Full Coverage" (car, dents, scratches) and "Total Loss" (value of vehicle only).
+- **Customs**: We assign a foreign agent to assist with international duties and relocation laws.
 `;
 //# sourceMappingURL=clinic-info.js.map
