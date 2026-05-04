@@ -128,6 +128,15 @@ export class VoiceService implements OnModuleInit {
 # ROLE
 You are Sarah, a Logistics Coordinator at TRT International.
 
+# THE 3-SENTENCE RULE
+1. Answer the user's specific question using the KNOWLEDGE BASE.
+2. If the question is about pricing, tracking, or drop-offs, give the phone number: 973-344-7100.
+3. End with a question like "Would you like me to transfer you to a specialist?" or "Do you have the container number handy?"
+
+# CRITICAL CONSTRAINTS
+- NEVER repeat the same fact twice in one call.
+- Be concise. If the user is silent, do not keep talking.
+- If you don't know a specific price, say: "Rates vary by route and cargo size. Let me get a sales manager on the line at extension 221 to give you an exact quote."
 # REAL-TIME CLOCK
 Current NYC time: ${nyTime}
 
@@ -175,15 +184,12 @@ ${TRT_LOGISTICS_KNOWLEDGE}
           const words = sentenceBuffer.trim().split(/\s+/);
           if (!firstChunkSent) {
             const currentBuffer = sentenceBuffer.toLowerCase().trim();
-
-            // Check if the AI has started with one of our "clean" fillers
             const matchingFiller = fastFillers.find((f) =>
               currentBuffer.startsWith(f),
             );
 
             if (matchingFiller) {
               const fillerToSpeak = matchingFiller;
-              // Remove the filler from the buffer so it's not repeated in the next chunk
               sentenceBuffer = sentenceBuffer
                 .substring(matchingFiller.length)
                 .trim();
@@ -204,7 +210,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
             if (trimmedBuffer && !isTitle) {
               const speechOutput = trimmedBuffer;
               sentenceBuffer = '';
-              firstChunkSent = true; // Ensure we don't trigger the filler logic again
+              firstChunkSent = true;
 
               speechQueue = speechQueue.then(async () => {
                 const audioBuffer = await this.speak(speechOutput);
@@ -302,21 +308,19 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       }
 
       await this.callsService.saveCall({
-        businessId: 'tribeca-dental-studio',
+        businessId: 'trt-international',
         patientPhone: '+19297696545',
         callSid: sid,
         summary: dbSummary,
         transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
         status: status,
-        procedure: 'NightLase',
+        procedure: 'Trt Inquiry',
       });
       console.log(`✅ DB Updated: ${status}`);
     } catch (e) {
       console.error('❌ DB Save failed:', e.message);
     }
   }
-
-  // HELPER: Handles CEO Email
   private async handleNotifications(
     procedure: string,
     timeStr: string,
@@ -326,7 +330,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       await sgMail.send({
         to: 'pr@nytds.com',
         from: 'kanatnazarov.dev@gmail.com',
-        subject: `Transwcipt of conversation: ${procedure}`,
+        subject: `Transcript of conversation: ${procedure}`,
         html: `<p>New transcript for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
       });
     } catch (err) {
@@ -338,7 +342,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       '6d380c70c92967c126387dba5367621b336c78f49a26e5ab7cfeaa7a99d6bc33@group.calendar.google.com';
 
     const event = {
-      summary: `Megan Booking: ${procedure || 'NightLase Eval'}`,
+      summary: `${procedure || 'Conversation'}`,
       description: `AI Lead via Fusion AI Agency`,
       start: { dateTime: finalStartTime, timeZone: 'America/New_York' },
       end: {
@@ -369,9 +373,9 @@ ${TRT_LOGISTICS_KNOWLEDGE}
             text,
             model_id: 'eleven_flash_v2_5',
             voice_settings: {
-              stability: 0.2, // LOWER stability = more emotional/faster variation
+              stability: 0.2,
               similarity_boost: 0.75,
-              speed_boost: true, // ADD THIS to enable the native speed multiplier
+              speed_boost: true,
             },
           }),
         },
@@ -383,7 +387,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       return Buffer.from(arrayBuffer);
     } catch (error) {
       console.error('❌ TTS Failed, using silence fallback');
-      return Buffer.alloc(8000, 0); // Returns 1 second of "mu-law silence" to prevent crashes
+      return Buffer.alloc(8000, 0);
     }
   }
   //
@@ -397,7 +401,16 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       smart_format: true,
       endpointing: 100,
       vad_events: true,
-      keywords: ['NightLase:2', 'Fotona:2', 'Tribeca:1.5'],
+      keywords: [
+        'TRT International:2',
+        'Newark:1.5',
+        'Drayage:2',
+        'Port Newark:1.5',
+        'Savannah:1.5',
+        'RGN:2',
+        'Lowboy:2',
+        'freight:1.2',
+      ],
     });
   }
 
