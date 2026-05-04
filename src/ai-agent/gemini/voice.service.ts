@@ -295,7 +295,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
           messages: [
             {
               role: 'system',
-              content: 'Summarize this dental call in one short sentence.',
+              content: 'Summarize this call in one short sentence.',
             },
             {
               role: 'user',
@@ -313,7 +313,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
         summary: dbSummary,
         transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
         status: status,
-        procedure: 'Trt Inquiry',
+        procedure: 'Logistics Inquiry',
       });
       console.log(`✅ DB Updated: ${status}`);
     } catch (e) {

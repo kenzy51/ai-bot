@@ -20,9 +20,9 @@ export const TRT_LOGISTICS_KNOWLEDGE = `
 - **Specialized Handling**: Professional shrink-wrapping and custom crating for high-value or fragile cargo.
 
 # 4. HEAVY HAUL & OVERSIZE SPECS
-- **Oversize Limits**: Anything exceeding 8.5ft wide, 13.5ft high, or 80,000 lbs. 
-- **Equipment Capacity**: State-of-the-art container handlers with 120,000 lbs lifting capacity.
-- **Forklift Fleet**: 80+ units ranging from 20,000 to 80,000 lbs capacity.
+- **Oversize Limits**: Anything exceeding 8.5ft wide, 13.5ft high, or 80,000 pounds. 
+- **Equipment Capacity**: State-of-the-art container handlers with 120,000 pounds lifting capacity.
+- **Forklift Fleet**: 80+ units ranging from 20,000 to 80,000 pounds capacity.
 - **Trailer Inventory**: RGNs (Removable Gooseneck), Lowboys, Perimeter Deck Trailers, and Double Drops.
 
 # 5. ACCOUNT & LOGISTICS PROTOCOLS
