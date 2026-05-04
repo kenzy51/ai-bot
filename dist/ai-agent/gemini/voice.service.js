@@ -18,7 +18,6 @@ const sdk_1 = require("@deepgram/sdk");
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const googleapis_1 = require("googleapis");
 const twilio_1 = __importDefault(require("twilio"));
-const clinic_info_1 = require("./clinic-info");
 const elevenlabs_1 = require("elevenlabs");
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const calls_service_1 = require("../../calls/calls.service");
@@ -103,7 +102,7 @@ let VoiceService = class VoiceService {
             },
         ];
     }
-    async generateResponse(userText, passedHistory, onAudioData) {
+    async generateResponse(userText, passedHistory, onAudioData, settings) {
         if (this.isProcessing)
             return '';
         this.isProcessing = true;
@@ -120,61 +119,17 @@ let VoiceService = class VoiceService {
             hour12: true,
         });
         const isWeekday = [0, 1, 2, 3, 4].includes(now.getDay());
+        const finalPrompt = settings.systemPrompt
+            .replace('{{nyTime}}', nyTime)
+            .replace('{{clinicName}}', settings.clinicName)
+            .replace('{{offerPrice}}', settings.offerPrice);
         try {
             const response = await this.groq.chat.completions.create({
                 model: 'llama-3.1-8b-instant',
                 messages: [
-                    {
-                        role: 'system',
-                        content: `
-# ROLE
-You are Jessica at Tribeca Dental Studio.
-
-# REAL-TIME CLOCK (Critical)
-Current NYC time: ${nyTime}
-Is today a weekday? ${isWeekday ? 'YES' : 'NO'}
-
-# OFFICE HOURS
-- Monday to Friday: 8:00 AM – 6:00 PM
-- Saturday & Sunday: 9:00 AM – 4:00 PM
-
-# CURRENT STATUS
-- If BEFORE closing time → We are **OPEN**
-- If AFTER closing time → We are **CLOSED**
-
-# AVAILABILITY RULES (Follow these strictly - highest priority)
-
-When the user says they want to come "now", "in 10 minutes", "in one hour", "today", "as soon as possible", etc.:
-
-- If we are currently OPEN:
-  → Start with: "We're actually open right now."
-  → Politely warn about closing time only if less than 2 hours left.
-  → Example at 10:43 AM: "We're actually open right now. We close at 6:00 PM today, so you'd have to be fairly quick. Would you like to come in today or would tomorrow morning work better?"
-
-- If we are CLOSED:
-  → First sentence MUST be exactly: "Our office is actually closed right now as it's past 6:00 PM."
-
-Never say "you'd have to be very fast" or "closing soon" when there are many hours left (e.g. at 10 AM or 11 AM).
-
-# GENERAL RESPONSE RULES
-- Always be friendly, professional and helpful.
-- For any dental service question: Start with "Absolutely!" or "We certainly do!"
-- After answering a non-airway question, gently pivot: "By the way, along with our standard care, we’re also checking all our patients' airways..."
-- Always end your response with a question to keep the conversation going.
-- Keep responses natural and conversational (not robotic). Do not make them extremely short.
-
-# TOOL USE RULES
-- Do NOT call 'transfer_call' or 'book_appointment' unless the user clearly wants to speak to a human or gives a specific date + time.
-- For prices or specific treatments: Do not guess. Offer an evaluation.
-
-# SALES MISSION (Airway Evaluation)
-- We offer a Comprehensive Airway Evaluation (normally $750). New patients can get it for only $49 (must be prepaid).
-- If interested: "I'll pass this to our team. They'll contact you shortly to send the patient forms."
-
-# KNOWLEDGE
-${clinic_info_1.CLINIC_KNOWLEDGE}
-`,
-                    },
+                    { role: 'system', content: finalPrompt },
+                    { role: 'system', content: `KNOWLEDGE: ${settings.customKnowledge}` },
+                    ...passedHistory.slice(-10),
                     ...leanHistory,
                 ],
                 tools: this.getGroqTools(),

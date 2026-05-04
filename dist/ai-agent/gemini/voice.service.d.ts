@@ -1,5 +1,6 @@
 import { OnModuleInit } from '@nestjs/common';
 import { CallsService } from 'src/calls/calls.service';
+import { BotSettings } from 'src/config/bot.settings.interface';
 export declare class VoiceService implements OnModuleInit {
     private readonly callsService;
     private deepgram;
@@ -17,7 +18,7 @@ export declare class VoiceService implements OnModuleInit {
     onModuleInit(): Promise<void>;
     makeOutboundCall(to: string): Promise<void>;
     private getGroqTools;
-    generateResponse(userText: string, passedHistory: any[], onAudioData: (buffer: Buffer) => void): Promise<string>;
+    generateResponse(userText: string, passedHistory: any[], onAudioData: (buffer: Buffer) => void, settings: BotSettings): Promise<string>;
     transferCall(sid: string): Promise<void>;
     onCallDisconnect(finalHistory: any[]): Promise<void>;
     private logToDatabase;
