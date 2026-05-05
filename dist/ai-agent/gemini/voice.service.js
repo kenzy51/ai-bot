@@ -259,12 +259,11 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             console.error('❌ Twilio Transfer Error:', err);
         }
     }
-    async onCallDisconnect(finalHistory) {
+    async onCallDisconnect(finalHistory, sid) {
         if (this.isLogging)
             return;
         this.isLogging = true;
-        const sidToLog = this.currentCallSid;
-        await this.logToDatabase('inquiry', sidToLog, finalHistory);
+        await this.logToDatabase('inquiry', sid, finalHistory);
         const transcriptString = finalHistory
             .map((h) => `<b>${h.role}:</b> ${h.content}`)
             .join('<br>');
@@ -276,6 +275,8 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
     async logToDatabase(status, sid, history) {
         try {
             let dbSummary = 'Inquiry TRT';
+            const phoneNumber = this.callMap.get(sid) || 'Unknown';
+            console.log(`💾 DB SAVE: Phone[${phoneNumber}] SID[${sid}]`);
             if (history.length >= 2) {
                 const sumResp = await this.groq.chat.completions.create({
                     model: 'llama-3.1-8b-instant',
@@ -294,7 +295,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             }
             await this.callsService.saveCall({
                 businessId: 'trt-international',
-                patientPhone: this.callMap.get(sid) || 'Unknown',
+                patientPhone: phoneNumber,
                 callSid: sid,
                 summary: dbSummary,
                 transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),

@@ -94,18 +94,14 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const callSid = this.sessions.get(twilioWs);
     const history = this.chatHistories.get(twilioWs);
 
-    if (callSid) {
-      console.log(`📊 Finalizing Log and Summary for: ${callSid}`);
-      // @ts-ignore
-      await this.geminiService.onCallDisconnect(history);
+    if (callSid && history) {
+      console.log(`📊 Finalizing Log for SID: ${callSid}`);
 
-      // Cleanup to prevent memory leaks
+      // Pass the callSid EXPLICITLY to the service
+      await this.geminiService.onCallDisconnect(history, callSid);
+
       this.sessions.delete(twilioWs);
-      this.chatHistories.delete(twilioWs); // <--- ADD THIS LINE
-    } else {
-      console.log(
-        '⚠️ Disconnect detected but no CallSid was found in session map.',
-      );
+      this.chatHistories.delete(twilioWs);
     }
   }
 }

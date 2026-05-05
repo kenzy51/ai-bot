@@ -81,14 +81,11 @@ let VoiceGateway = class VoiceGateway {
         console.log('❌ WebSocket Disconnected');
         const callSid = this.sessions.get(twilioWs);
         const history = this.chatHistories.get(twilioWs);
-        if (callSid) {
-            console.log(`📊 Finalizing Log and Summary for: ${callSid}`);
-            await this.geminiService.onCallDisconnect(history);
+        if (callSid && history) {
+            console.log(`📊 Finalizing Log for SID: ${callSid}`);
+            await this.geminiService.onCallDisconnect(history, callSid);
             this.sessions.delete(twilioWs);
             this.chatHistories.delete(twilioWs);
-        }
-        else {
-            console.log('⚠️ Disconnect detected but no CallSid was found in session map.');
         }
     }
 };
