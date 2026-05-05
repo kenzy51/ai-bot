@@ -61,6 +61,13 @@ let LeadsController = class LeadsController {
         }
         return { status: 'received' };
     }
+    async getConfig() {
+        return {
+            knowledge: this.configStore.getKnowledge(),
+            keywords: this.configStore.getKeywords().join(', '),
+            greeting: this.configStore.getGreeting(),
+        };
+    }
 };
 exports.LeadsController = LeadsController;
 __decorate([
@@ -85,6 +92,12 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], LeadsController.prototype, "handleRecordingCallback", null);
+__decorate([
+    (0, common_1.Get)('config'),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", []),
+    __metadata("design:returntype", Promise)
+], LeadsController.prototype, "getConfig", null);
 exports.LeadsController = LeadsController = __decorate([
     (0, common_1.Controller)('leads'),
     __metadata("design:paramtypes", [calls_service_1.CallsService,

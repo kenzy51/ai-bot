@@ -1,5 +1,5 @@
 /* eslint-disable prettier/prettier */
-import { Controller, Post, Body, Header } from '@nestjs/common';
+import { Controller, Post, Body, Header, Get } from '@nestjs/common';
 import { ConfigStore } from 'src/ai-agent/config/config';
 import { VoiceService } from 'src/ai-agent/gemini/voice.service';
 import { CallsService } from 'src/calls/calls.service';
@@ -23,8 +23,8 @@ export class LeadsController {
   @Post('incoming-call')
   @Header('Content-Type', 'text/xml')
   handleIncomingCall(@Body() body: any) {
-    const from = body.From; 
-    const sid = body.CallSid; 
+    const from = body.From;
+    const sid = body.CallSid;
 
     if (from && sid) {
       this.voiceService.setCallerData(sid, from);
@@ -40,9 +40,13 @@ export class LeadsController {
   }
 
   @Post('update-config')
-  async updateConfig(@Body() body: { knowledge: string; keywords: string; greeting: string }) {
+  async updateConfig(
+    @Body() body: { knowledge: string; keywords: string; greeting: string },
+  ) {
     this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
-    console.log('✨ Bot Configuration Updated (Knowledge + Keywords + Greeting)');
+    console.log(
+      '✨ Bot Configuration Updated (Knowledge + Keywords + Greeting)',
+    );
     return { success: true };
   }
 
@@ -58,5 +62,13 @@ export class LeadsController {
       }
     }
     return { status: 'received' };
+  }
+  @Get('config')
+  async getConfig() {
+    return {
+      knowledge: this.configStore.getKnowledge(),
+      keywords: this.configStore.getKeywords().join(', '), // Convert array back to string for the input
+      greeting: this.configStore.getGreeting(),
+    };
   }
 }

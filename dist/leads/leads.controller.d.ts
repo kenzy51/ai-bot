@@ -18,4 +18,9 @@ export declare class LeadsController {
     handleRecordingCallback(body: any): Promise<{
         status: string;
     }>;
+    getConfig(): Promise<{
+        knowledge: string;
+        keywords: string;
+        greeting: string;
+    }>;
 }

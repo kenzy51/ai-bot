@@ -51,7 +51,7 @@ let ConfigStore = class ConfigStore {
     config = {
         knowledge: '',
         keywords: [],
-        greeting: 'Hello, this is Sarah with TRT International. How can I help you move freight today?'
+        greeting: 'Hello, this is Sarah with TRT International. How can I help you move freight today?',
     };
     constructor() {
         this.loadConfig();
@@ -63,13 +63,22 @@ let ConfigStore = class ConfigStore {
     }
     updateConfig(knowledge, keywords, greeting) {
         this.config.knowledge = knowledge;
-        this.config.keywords = keywords.split(',').map(k => k.trim());
+        this.config.keywords = keywords
+            .split(',')
+            .map((k) => k.replace(/['"]+/g, '').trim())
+            .filter((k) => k !== '');
         this.config.greeting = greeting;
         fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
     }
-    getKnowledge() { return this.config.knowledge; }
-    getKeywords() { return this.config.keywords; }
-    getGreeting() { return this.config.greeting; }
+    getKnowledge() {
+        return this.config.knowledge;
+    }
+    getKeywords() {
+        return this.config.keywords;
+    }
+    getGreeting() {
+        return this.config.greeting;
+    }
 };
 exports.ConfigStore = ConfigStore;
 exports.ConfigStore = ConfigStore = __decorate([
