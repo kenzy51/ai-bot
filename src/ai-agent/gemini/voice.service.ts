@@ -412,9 +412,11 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       keywords: dynamicKeywords, 
     });
   }
-  async getInitialGreeting(): Promise<string> {
-    const dynamicGreeting = this.configStore.getGreeting();
-    console.log('🎙️ Bot starting with greeting:', dynamicGreeting);
-    return dynamicGreeting;
-  }
+ async getInitialGreeting(): Promise<string> {
+  const dynamicGreeting = this.configStore.getGreeting();
+
+  console.log("🎙️ Sarah is starting with greeting:", dynamicGreeting);
+
+  return dynamicGreeting || "Hello, this is Sarah with TRT. How can I help you?";
+}
 }

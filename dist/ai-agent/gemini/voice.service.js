@@ -381,8 +381,8 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
     }
     async getInitialGreeting() {
         const dynamicGreeting = this.configStore.getGreeting();
-        console.log('🎙️ Bot starting with greeting:', dynamicGreeting);
-        return dynamicGreeting;
+        console.log("🎙️ Sarah is starting with greeting:", dynamicGreeting);
+        return dynamicGreeting || "Hello, this is Sarah with TRT. How can I help you?";
     }
 };
 exports.VoiceService = VoiceService;
