@@ -366,6 +366,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
         }
     }
     getDeepgramLive() {
+        const dynamicKeywords = this.configStore.getKeywords();
         return this.deepgram.listen.live({
             model: 'nova-2',
             language: 'en-US',
@@ -375,7 +376,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             smart_format: true,
             endpointing: 100,
             vad_events: true,
-            keywords: [],
+            keywords: dynamicKeywords,
         });
     }
     async getInitialGreeting() {
