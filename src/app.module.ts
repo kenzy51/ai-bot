@@ -20,6 +20,6 @@ import { CallsController } from './calls/calls.controller';
     }),
   ],
   controllers: [AppController, LeadsController],
-  providers: [AppService, ConfigStore],
+  providers: [AppService],
 })
 export class AppModule {}
