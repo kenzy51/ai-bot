@@ -15,7 +15,7 @@ import { CallsController } from './calls/calls.controller';
     CallsModule,
     ConfigModule.forRoot(),
     MongooseModule.forRoot(process.env.MONGODB_URI!, {
-      family: 4, // Forces IPv4 to bypass hotspot/IPv6 issues
+      family: 4, 
       serverSelectionTimeoutMS: 5000, // Faster failure feedback
     }),
   ],
