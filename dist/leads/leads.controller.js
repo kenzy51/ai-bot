@@ -14,16 +14,28 @@ var __param = (this && this.__param) || function (paramIndex, decorator) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.LeadsController = void 0;
 const common_1 = require("@nestjs/common");
+const config_1 = require("../ai-agent/config/config");
+const voice_service_1 = require("../ai-agent/gemini/voice.service");
 const calls_service_1 = require("../calls/calls.service");
 const twilio = require("twilio");
 let LeadsController = class LeadsController {
     callsService;
+    voiceService;
+    configStore;
     client;
-    constructor(callsService) {
+    constructor(callsService, voiceService, configStore) {
         this.callsService = callsService;
+        this.voiceService = voiceService;
+        this.configStore = configStore;
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
-    handleIncomingCall() {
+    handleIncomingCall(body) {
+        const from = body.From;
+        const sid = body.CallSid;
+        if (from && sid) {
+            this.voiceService.setCallerData(sid, from);
+            console.log(`📞 Incoming call from: ${from} (SID: ${sid})`);
+        }
         return `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Connect>
@@ -31,10 +43,14 @@ let LeadsController = class LeadsController {
       </Connect>
     </Response>`;
     }
+    async updateConfig(body) {
+        this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
+        console.log('✨ Bot Configuration Updated (Knowledge + Keywords + Greeting)');
+        return { success: true };
+    }
     async handleRecordingCallback(body) {
         const { RecordingUrl, CallSid } = body;
         if (RecordingUrl) {
-            console.log(`✅ Recording finished for Call ${CallSid}`);
             const finalUrl = `${RecordingUrl}.wav`;
             try {
                 await this.callsService.updateCallRecording(CallSid, finalUrl);
@@ -50,10 +66,18 @@ exports.LeadsController = LeadsController;
 __decorate([
     (0, common_1.Post)('incoming-call'),
     (0, common_1.Header)('Content-Type', 'text/xml'),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", []),
+    __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", void 0)
 ], LeadsController.prototype, "handleIncomingCall", null);
+__decorate([
+    (0, common_1.Post)('update-config'),
+    __param(0, (0, common_1.Body)()),
+    __metadata("design:type", Function),
+    __metadata("design:paramtypes", [Object]),
+    __metadata("design:returntype", Promise)
+], LeadsController.prototype, "updateConfig", null);
 __decorate([
     (0, common_1.Post)('recording-callback'),
     __param(0, (0, common_1.Body)()),
@@ -63,6 +87,8 @@ __decorate([
 ], LeadsController.prototype, "handleRecordingCallback", null);
 exports.LeadsController = LeadsController = __decorate([
     (0, common_1.Controller)('leads'),
-    __metadata("design:paramtypes", [calls_service_1.CallsService])
+    __metadata("design:paramtypes", [calls_service_1.CallsService,
+        voice_service_1.VoiceService,
+        config_1.ConfigStore])
 ], LeadsController);
 //# sourceMappingURL=leads.controller.js.map

@@ -22,8 +22,10 @@ const clinic_info_1 = require("./clinic-info");
 const elevenlabs_1 = require("elevenlabs");
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const calls_service_1 = require("../../calls/calls.service");
+const config_1 = require("../config/config");
 let VoiceService = class VoiceService {
     callsService;
+    configStore;
     deepgram;
     groq;
     calendar;
@@ -32,10 +34,12 @@ let VoiceService = class VoiceService {
     elevenlabs;
     lastAction = '';
     callStatus = 'inquiry';
+    currentCallerPhone = '';
     isLogging = false;
     currentCallSid = '';
-    constructor(callsService) {
+    constructor(callsService, configStore) {
         this.callsService = callsService;
+        this.configStore = configStore;
         mail_1.default.setApiKey(process.env.SENDGRID_API_KEY);
         this.elevenlabs = new elevenlabs_1.ElevenLabsClient({ apiKey: process.env.ELEVEN });
         this.deepgram = (0, sdk_1.createClient)(process.env.DEEPGRAM_API_KEY);
@@ -50,6 +54,10 @@ let VoiceService = class VoiceService {
     }
     setCurrentCallSid(sid) {
         this.currentCallSid = sid;
+    }
+    setCallerData(sid, phone) {
+        this.currentCallSid = sid;
+        this.currentCallerPhone = phone;
     }
     async onModuleInit() {
         console.log('🚀 Fusion AI Backend Started.');
@@ -286,7 +294,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             }
             await this.callsService.saveCall({
                 businessId: 'trt-international',
-                patientPhone: '+19297696545',
+                patientPhone: this.currentCallerPhone || 'Unknown',
                 callSid: sid,
                 summary: dbSummary,
                 transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
@@ -380,12 +388,13 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
         });
     }
     async getInitialGreeting() {
-        return 'Hello, this is Sarah with TRT International. Are you looking to move freight or check on a shipment today?';
+        return this.configStore.getGreeting();
     }
 };
 exports.VoiceService = VoiceService;
 exports.VoiceService = VoiceService = __decorate([
     (0, common_1.Injectable)(),
-    __metadata("design:paramtypes", [calls_service_1.CallsService])
+    __metadata("design:paramtypes", [calls_service_1.CallsService,
+        config_1.ConfigStore])
 ], VoiceService);
 //# sourceMappingURL=voice.service.js.map

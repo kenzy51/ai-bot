@@ -7,6 +7,7 @@ import { CallsModule } from './calls/calls.module';
 import { ConfigModule } from '@nestjs/config';
 import { config } from 'dotenv';
 import { MongooseModule } from '@nestjs/mongoose';
+import { ConfigStore } from '../src/ai-agent/config/config';
 import { CallsController } from './calls/calls.controller';
 @Module({
   imports: [
@@ -19,6 +20,6 @@ import { CallsController } from './calls/calls.controller';
     }),
   ],
   controllers: [AppController, LeadsController],
-  providers: [AppService],
+  providers: [AppService, ConfigStore],
 })
 export class AppModule {}

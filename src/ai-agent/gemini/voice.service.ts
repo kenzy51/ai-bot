@@ -8,6 +8,7 @@ import { TRT_LOGISTICS_KNOWLEDGE } from './clinic-info';
 import { ElevenLabsClient } from 'elevenlabs';
 import sgMail from '@sendgrid/mail';
 import { CallsService } from 'src/calls/calls.service';
+import { ConfigStore } from '../config/config';
 @Injectable()
 export class VoiceService implements OnModuleInit {
   private deepgram: DeepgramClient;
@@ -18,9 +19,13 @@ export class VoiceService implements OnModuleInit {
   private elevenlabs: ElevenLabsClient;
   private lastAction = '';
   private callStatus: string = 'inquiry';
+  private currentCallerPhone: string = ''; // Add this
   private isLogging = false;
   private currentCallSid: string = '';
-  constructor(private readonly callsService: CallsService) {
+  constructor(
+    private readonly callsService: CallsService,
+    private readonly configStore: ConfigStore, // 1. Inject the ConfigStore
+  ) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
     this.elevenlabs = new ElevenLabsClient({ apiKey: process.env.ELEVEN });
     this.deepgram = createClient(process.env.DEEPGRAM_API_KEY);
@@ -40,6 +45,10 @@ export class VoiceService implements OnModuleInit {
   }
   setCurrentCallSid(sid: string) {
     this.currentCallSid = sid;
+  }
+  setCallerData(sid: string, phone: string) {
+    this.currentCallSid = sid;
+    this.currentCallerPhone = phone;
   }
   async onModuleInit() {
     // await this.makeOutboundCall('+19297696545');
@@ -307,7 +316,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
 
       await this.callsService.saveCall({
         businessId: 'trt-international',
-        patientPhone: '+19297696545',
+        patientPhone: this.currentCallerPhone || 'Unknown',
         callSid: sid,
         summary: dbSummary,
         transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
@@ -413,6 +422,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
   }
 
   async getInitialGreeting(): Promise<string> {
-    return 'Hello, this is Sarah with TRT International. Are you looking to move freight or check on a shipment today?';
+    // 4. Dynamically injected from Dashboard
+    return this.configStore.getGreeting();
   }
 }

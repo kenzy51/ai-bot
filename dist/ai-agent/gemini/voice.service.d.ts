@@ -1,7 +1,9 @@
 import { OnModuleInit } from '@nestjs/common';
 import { CallsService } from 'src/calls/calls.service';
+import { ConfigStore } from '../config/config';
 export declare class VoiceService implements OnModuleInit {
     private readonly callsService;
+    private readonly configStore;
     private deepgram;
     private groq;
     private calendar;
@@ -10,10 +12,12 @@ export declare class VoiceService implements OnModuleInit {
     private elevenlabs;
     private lastAction;
     private callStatus;
+    private currentCallerPhone;
     private isLogging;
     private currentCallSid;
-    constructor(callsService: CallsService);
+    constructor(callsService: CallsService, configStore: ConfigStore);
     setCurrentCallSid(sid: string): void;
+    setCallerData(sid: string, phone: string): void;
     onModuleInit(): Promise<void>;
     makeOutboundCall(to: string): Promise<void>;
     private getGroqTools;
