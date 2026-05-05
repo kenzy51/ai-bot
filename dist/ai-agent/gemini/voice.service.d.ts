@@ -15,6 +15,7 @@ export declare class VoiceService implements OnModuleInit {
     private currentCallerPhone;
     private isLogging;
     private currentCallSid;
+    private callMap;
     constructor(callsService: CallsService, configStore: ConfigStore);
     setCurrentCallSid(sid: string): void;
     setCallerData(sid: string, phone: string): void;

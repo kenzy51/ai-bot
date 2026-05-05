@@ -48,12 +48,13 @@ async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['error', 'warn', 'log'],
     });
-    app.use(express.urlencoded({ extended: true }));
     app.use(express.json());
+    app.use(express.urlencoded({ extended: true }));
     app.enableCors();
     app.useWebSocketAdapter(new platform_ws_1.WsAdapter(app));
-    await app.listen(3003);
-    console.log('🚀 Server running on port 3003');
+    const port = process.env.PORT || 3003;
+    await app.listen(port, '0.0.0.0');
+    console.log(`🚀 Server running on port ${port}`);
 }
 bootstrap().catch((err) => {
     console.error('Fatal Error during bootstrap:', err);

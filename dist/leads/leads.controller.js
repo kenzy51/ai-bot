@@ -30,11 +30,14 @@ let LeadsController = class LeadsController {
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
     handleIncomingCall(body) {
+        console.log('--- TWILIO WEBHOOK DEBUG ---');
+        console.log('Full Body:', JSON.stringify(body));
+        console.log('From Number:', body.From);
+        console.log('Call SID:', body.CallSid);
         const from = body.From;
         const sid = body.CallSid;
         if (from && sid) {
             this.voiceService.setCallerData(sid, from);
-            console.log(`📞 Incoming call from: ${from} (SID: ${sid})`);
         }
         return `<?xml version="1.0" encoding="UTF-8"?>
     <Response>

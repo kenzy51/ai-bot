@@ -22,6 +22,8 @@ export class VoiceService implements OnModuleInit {
   private currentCallerPhone: string = ''; // Add this
   private isLogging = false;
   private currentCallSid: string = '';
+  private callMap = new Map<string, string>();
+
   constructor(
     private readonly callsService: CallsService,
     private readonly configStore: ConfigStore, // 1. Inject the ConfigStore
@@ -47,8 +49,7 @@ export class VoiceService implements OnModuleInit {
     this.currentCallSid = sid;
   }
   setCallerData(sid: string, phone: string) {
-    this.currentCallSid = sid;
-    this.currentCallerPhone = phone;
+    this.callMap.set(sid, phone);
   }
   async onModuleInit() {
     // await this.makeOutboundCall('+19297696545');
@@ -295,7 +296,6 @@ ${TRT_LOGISTICS_KNOWLEDGE}
   private async logToDatabase(status: string, sid: string, history: any[]) {
     try {
       let dbSummary = 'Inquiry TRT';
-
       // Generate summary only if there's enough dialogue
       if (history.length >= 2) {
         const sumResp = await this.groq.chat.completions.create({
@@ -316,7 +316,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
 
       await this.callsService.saveCall({
         businessId: 'trt-international',
-        patientPhone: this.currentCallerPhone || 'Unknown',
+        patientPhone: this.callMap.get(sid) || 'Unknown',
         callSid: sid,
         summary: dbSummary,
         transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
@@ -335,7 +335,7 @@ ${TRT_LOGISTICS_KNOWLEDGE}
   ) {
     try {
       await sgMail.send({
-        to: 'pr@nytds.com',
+        to: 'nazarovkanat7@gmail.com',
         from: 'kanatnazarov.dev@gmail.com',
         subject: `Transcript of conversation: ${procedure}`,
         html: `<p>New transcript for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
@@ -409,14 +409,16 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       smart_format: true,
       endpointing: 100,
       vad_events: true,
-      keywords: dynamicKeywords, 
+      keywords: dynamicKeywords,
     });
   }
- async getInitialGreeting(): Promise<string> {
-  const dynamicGreeting = this.configStore.getGreeting();
+  async getInitialGreeting(): Promise<string> {
+    const dynamicGreeting = this.configStore.getGreeting();
 
-  console.log("🎙️ Sarah is starting with greeting:", dynamicGreeting);
+    console.log('🎙️ Sarah is starting with greeting:', dynamicGreeting);
 
-  return dynamicGreeting || "Hello, this is Sarah with TRT. How can I help you?";
-}
+    return (
+      dynamicGreeting || 'Hello, this is Sarah with TRT. How can I help you?'
+    );
+  }
 }

@@ -37,6 +37,7 @@ let VoiceService = class VoiceService {
     currentCallerPhone = '';
     isLogging = false;
     currentCallSid = '';
+    callMap = new Map();
     constructor(callsService, configStore) {
         this.callsService = callsService;
         this.configStore = configStore;
@@ -56,8 +57,7 @@ let VoiceService = class VoiceService {
         this.currentCallSid = sid;
     }
     setCallerData(sid, phone) {
-        this.currentCallSid = sid;
-        this.currentCallerPhone = phone;
+        this.callMap.set(sid, phone);
     }
     async onModuleInit() {
         console.log('🚀 Fusion AI Backend Started.');
@@ -294,7 +294,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
             }
             await this.callsService.saveCall({
                 businessId: 'trt-international',
-                patientPhone: this.currentCallerPhone || 'Unknown',
+                patientPhone: this.callMap.get(sid) || 'Unknown',
                 callSid: sid,
                 summary: dbSummary,
                 transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
@@ -310,7 +310,7 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
     async handleNotifications(procedure, timeStr, userText) {
         try {
             await mail_1.default.send({
-                to: 'pr@nytds.com',
+                to: 'nazarovkanat7@gmail.com',
                 from: 'kanatnazarov.dev@gmail.com',
                 subject: `Transcript of conversation: ${procedure}`,
                 html: `<p>New transcript for <b>${timeStr}</b>.</p><p>Last user text: ${userText}</p>`,
@@ -381,8 +381,8 @@ ${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
     }
     async getInitialGreeting() {
         const dynamicGreeting = this.configStore.getGreeting();
-        console.log("🎙️ Sarah is starting with greeting:", dynamicGreeting);
-        return dynamicGreeting || "Hello, this is Sarah with TRT. How can I help you?";
+        console.log('🎙️ Sarah is starting with greeting:', dynamicGreeting);
+        return (dynamicGreeting || 'Hello, this is Sarah with TRT. How can I help you?');
     }
 };
 exports.VoiceService = VoiceService;
