@@ -3,8 +3,8 @@ export declare class ConfigStore {
     private config;
     constructor();
     private loadConfig;
-    updateConfig(knowledge: string, keywords: any, greeting: string): void;
+    updateConfig(knowledge: string, keywords: string, greeting: string): void;
     getKnowledge(): string;
-    getKeywords(): never[];
+    getKeywords(): string[];
     getGreeting(): string;
 }

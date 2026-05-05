@@ -408,21 +408,12 @@ ${TRT_LOGISTICS_KNOWLEDGE}
       smart_format: true,
       endpointing: 100,
       vad_events: true,
-      keywords: [
-        'TRT International:2',
-        'Newark:1.5',
-        'Drayage:2',
-        'Port Newark:1.5',
-        'Savannah:1.5',
-        'RGN:2',
-        'Lowboy:2',
-        'freight:1.2',
-      ],
+      keywords: [],
     });
   }
-
   async getInitialGreeting(): Promise<string> {
-    // 4. Dynamically injected from Dashboard
-    return this.configStore.getGreeting();
+    const dynamicGreeting = this.configStore.getGreeting();
+    console.log('🎙️ Bot starting with greeting:', dynamicGreeting);
+    return dynamicGreeting;
   }
 }

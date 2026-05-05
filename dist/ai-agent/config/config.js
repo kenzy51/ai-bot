@@ -57,8 +57,15 @@ let ConfigStore = class ConfigStore {
         this.loadConfig();
     }
     loadConfig() {
-        if (fs.existsSync(this.configPath)) {
-            this.config = JSON.parse(fs.readFileSync(this.configPath, 'utf-8'));
+        try {
+            if (fs.existsSync(this.configPath)) {
+                const fileData = fs.readFileSync(this.configPath, 'utf-8');
+                this.config = JSON.parse(fileData);
+                console.log("✅ Sarah's brain loaded from disk.");
+            }
+        }
+        catch (error) {
+            console.error("❌ Failed to load bot-config.json:", error);
         }
     }
     updateConfig(knowledge, keywords, greeting) {
@@ -68,16 +75,22 @@ let ConfigStore = class ConfigStore {
             .map((k) => k.replace(/['"]+/g, '').trim())
             .filter((k) => k !== '');
         this.config.greeting = greeting;
-        fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
+        try {
+            fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
+            console.log("💾 Config saved to disk successfully.");
+        }
+        catch (error) {
+            console.error("❌ Failed to save config:", error);
+        }
     }
     getKnowledge() {
-        return this.config.knowledge;
+        return this.config.knowledge || "";
     }
     getKeywords() {
-        return this.config.keywords;
+        return this.config.keywords || [];
     }
     getGreeting() {
-        return this.config.greeting;
+        return this.config.greeting || "Hello, this is Sarah.";
     }
 };
 exports.ConfigStore = ConfigStore;
