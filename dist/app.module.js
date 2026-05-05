@@ -15,7 +15,7 @@ const leads_controller_1 = require("./leads/leads.controller");
 const calls_module_1 = require("./calls/calls.module");
 const config_1 = require("@nestjs/config");
 const mongoose_1 = require("@nestjs/mongoose");
-const config_2 = require("../src/ai-agent/config/config");
+const config_2 = require("./ai-agent/config/config");
 let AppModule = class AppModule {
 };
 exports.AppModule = AppModule;
