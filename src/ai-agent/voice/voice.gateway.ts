@@ -9,7 +9,7 @@ import { LiveTranscriptionEvents } from '@deepgram/sdk';
 
 @WebSocketGateway({ path: '/media-stream' })
 export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  constructor(private readonly geminiService: VoiceService) {}
+  constructor(private readonly voiceService: VoiceService) {}
   private chatHistories = new Map<WebSocket, any[]>();
   // Tracks CallSid per WebSocket connection
   private sessions = new Map<WebSocket, string>();
@@ -17,7 +17,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleConnection(twilioWs: WebSocket) {
     let chatHistory: any[] = [];
     let streamSid: string = '';
-    const dgLive = this.geminiService.getDeepgramLive();
+    const dgLive = this.voiceService.getDeepgramLive();
     this.chatHistories.set(twilioWs, chatHistory);
     const sendAudioToTwilio = (base64Audio: string) => {
       if (!streamSid) return;
@@ -32,9 +32,9 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     dgLive.on(LiveTranscriptionEvents.Open, async () => {
       console.log('✅ Deepgram Ready');
-      const greeting = await this.geminiService.getInitialGreeting();
+      const greeting = await this.voiceService.getInitialGreeting();
       chatHistory.push({ role: 'assistant', content: greeting });
-      const audio = await this.geminiService.speak(greeting);
+      const audio = await this.voiceService.speak(greeting);
       sendAudioToTwilio(audio.toString('base64'));
     });
 
@@ -46,7 +46,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
 
       chatHistory.push({ role: 'user', content: transcript });
-      const aiResponse = await this.geminiService.generateResponse(
+      const aiResponse = await this.voiceService.generateResponse(
         transcript,
         chatHistory,
         (audioBuffer) => {
@@ -70,7 +70,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
         // CRITICAL: Link this socket to the CallSid for the disconnect trigger
         this.sessions.set(twilioWs, callSid);
-        this.geminiService.setCurrentCallSid(callSid);
+        this.voiceService.setCurrentCallSid(callSid);
 
         console.log(`📞 Call Started: ${callSid}`);
       }
@@ -98,7 +98,7 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
       console.log(`📊 Finalizing Log for SID: ${callSid}`);
 
       // Pass the callSid EXPLICITLY to the service
-      await this.geminiService.onCallDisconnect(history, callSid);
+      await this.voiceService.onCallDisconnect(history, callSid);
 
       this.sessions.delete(twilioWs);
       this.chatHistories.delete(twilioWs);

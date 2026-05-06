@@ -14,16 +14,16 @@ const websockets_1 = require("@nestjs/websockets");
 const voice_service_1 = require("../gemini/voice.service");
 const sdk_1 = require("@deepgram/sdk");
 let VoiceGateway = class VoiceGateway {
-    geminiService;
-    constructor(geminiService) {
-        this.geminiService = geminiService;
+    voiceService;
+    constructor(voiceService) {
+        this.voiceService = voiceService;
     }
     chatHistories = new Map();
     sessions = new Map();
     handleConnection(twilioWs) {
         let chatHistory = [];
         let streamSid = '';
-        const dgLive = this.geminiService.getDeepgramLive();
+        const dgLive = this.voiceService.getDeepgramLive();
         this.chatHistories.set(twilioWs, chatHistory);
         const sendAudioToTwilio = (base64Audio) => {
             if (!streamSid)
@@ -36,9 +36,9 @@ let VoiceGateway = class VoiceGateway {
         };
         dgLive.on(sdk_1.LiveTranscriptionEvents.Open, async () => {
             console.log('✅ Deepgram Ready');
-            const greeting = await this.geminiService.getInitialGreeting();
+            const greeting = await this.voiceService.getInitialGreeting();
             chatHistory.push({ role: 'assistant', content: greeting });
-            const audio = await this.geminiService.speak(greeting);
+            const audio = await this.voiceService.speak(greeting);
             sendAudioToTwilio(audio.toString('base64'));
         });
         dgLive.on(sdk_1.LiveTranscriptionEvents.Transcript, async (data) => {
@@ -48,7 +48,7 @@ let VoiceGateway = class VoiceGateway {
             console.log(`👤 User: ${transcript}`);
             twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
             chatHistory.push({ role: 'user', content: transcript });
-            const aiResponse = await this.geminiService.generateResponse(transcript, chatHistory, (audioBuffer) => {
+            const aiResponse = await this.voiceService.generateResponse(transcript, chatHistory, (audioBuffer) => {
                 sendAudioToTwilio(audioBuffer.toString('base64'));
             });
             if (aiResponse) {
@@ -65,7 +65,7 @@ let VoiceGateway = class VoiceGateway {
                 streamSid = msg.start.streamSid;
                 const callSid = msg.start.callSid;
                 this.sessions.set(twilioWs, callSid);
-                this.geminiService.setCurrentCallSid(callSid);
+                this.voiceService.setCurrentCallSid(callSid);
                 console.log(`📞 Call Started: ${callSid}`);
             }
             if (msg.event === 'media' && dgLive.getReadyState() === 1) {
@@ -83,7 +83,7 @@ let VoiceGateway = class VoiceGateway {
         const history = this.chatHistories.get(twilioWs);
         if (callSid && history) {
             console.log(`📊 Finalizing Log for SID: ${callSid}`);
-            await this.geminiService.onCallDisconnect(history, callSid);
+            await this.voiceService.onCallDisconnect(history, callSid);
             this.sessions.delete(twilioWs);
             this.chatHistories.delete(twilioWs);
         }

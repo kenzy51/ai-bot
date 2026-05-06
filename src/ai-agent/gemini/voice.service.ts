@@ -115,6 +115,7 @@ export class VoiceService implements OnModuleInit {
   ) {
     if (this.isProcessing) return '';
     this.isProcessing = true;
+    const dynamicKnowledge = this.configStore.getKnowledge();
     const leanHistory = passedHistory.slice(-10);
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
@@ -164,7 +165,7 @@ Current NYC time: ${nyTime}
 - If they are ready for a quote: "I'll have our sales team reach out to you immediately to finalize the rates for your shipment."
 
 # KNOWLEDGE
-${TRT_LOGISTICS_KNOWLEDGE}
+${dynamicKnowledge}
 `,
           },
           ...leanHistory,

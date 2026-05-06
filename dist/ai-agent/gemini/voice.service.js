@@ -18,7 +18,6 @@ const sdk_1 = require("@deepgram/sdk");
 const groq_sdk_1 = __importDefault(require("groq-sdk"));
 const googleapis_1 = require("googleapis");
 const twilio_1 = __importDefault(require("twilio"));
-const clinic_info_1 = require("./clinic-info");
 const elevenlabs_1 = require("elevenlabs");
 const mail_1 = __importDefault(require("@sendgrid/mail"));
 const calls_service_1 = require("../../calls/calls.service");
@@ -115,6 +114,7 @@ let VoiceService = class VoiceService {
         if (this.isProcessing)
             return '';
         this.isProcessing = true;
+        const dynamicKnowledge = this.configStore.getKnowledge();
         const leanHistory = passedHistory.slice(-10);
         const now = new Date();
         const nyTime = now.toLocaleString('en-US', {
@@ -164,7 +164,7 @@ Current NYC time: ${nyTime}
 - If they are ready for a quote: "I'll have our sales team reach out to you immediately to finalize the rates for your shipment."
 
 # KNOWLEDGE
-${clinic_info_1.TRT_LOGISTICS_KNOWLEDGE}
+${dynamicKnowledge}
 `,
                     },
                     ...leanHistory,
