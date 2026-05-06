@@ -15,23 +15,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.CallsController = void 0;
 const common_1 = require("@nestjs/common");
 const calls_service_1 = require("./calls.service");
+const node_stream_1 = require("node:stream");
 let CallsController = class CallsController {
     callsService;
     constructor(callsService) {
         this.callsService = callsService;
     }
     async handleIncoming(res) {
-        const ngrokUrl = 'https://fusion-ai-bot.onrender.com';
+        const serverUrl = process.env.SERVER_URL || 'fusion-ai-bot.onrender.com';
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
-  <Start>
-    <Recording 
-      recordingStatusCallback="${ngrokUrl}/calls/recording-callback"
-      recordingStatusCallbackMethod="POST"
-    />
-  </Start>
   <Connect>
-    <Stream url="wss://${ngrokUrl.replace('https://', '')}/media-stream" />
+    <Stream url="wss://${serverUrl}/media-stream" />
   </Connect>
 </Response>`.trim();
         res.set('Content-Type', 'text/xml');
@@ -39,60 +34,68 @@ let CallsController = class CallsController {
     }
     async getTransferDial(res) {
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-  <Response>
-    <Say>Connecting you to the office now.</Say>
-    <Dial record="record-from-answer-dual" 
-          recordingStatusCallback="https://fusion-ai-bot.onrender.com/calls/recording-callback" 
-          callerId="+19297022797">
-      <Number>+19297696545</Number>
-    </Dial>
-  </Response>`;
+    <Response>
+      <Say>Connecting you to the office now.</Say>
+      <Dial record="record-from-answer-dual" 
+            recordingStatusCallback="https://${process.env.SERVER_URL}/calls/recording-callback" 
+            callerId="+19297022797">
+        <Number>+19297696545</Number>
+      </Dial>
+    </Response>`;
         res.set('Content-Type', 'text/xml');
         return res.status(200).send(twiml);
     }
     async handleRecordingCallback(body) {
         const { CallSid, RecordingUrl } = body;
-        if (RecordingUrl) {
-            const directUrl = `${RecordingUrl}.wav`;
-            await this.callsService.updateCallRecording(CallSid, directUrl);
-            console.log(`✅ Recording link synced: ${directUrl}`);
+        if (RecordingUrl && CallSid) {
+            const directUrl = RecordingUrl.endsWith('.wav')
+                ? RecordingUrl
+                : `${RecordingUrl}.wav`;
+            try {
+                await this.callsService.updateCallRecording(CallSid, directUrl);
+                console.log(`✅ Recording link synced for SID ${CallSid}: ${directUrl}`);
+            }
+            catch (error) {
+                console.error('❌ DB Update Error during callback:', error.message);
+            }
         }
         return { status: 'ok' };
     }
-    async streamRecording(recordingUrl, res) {
-        if (!process.env.TWILIO_ACCOUNT_SID || !process.env.TWILIO_AUTH_TOKEN) {
-            console.error('❌ Environment variables are missing!');
-            return res.status(500).send('Server configuration error');
+    async streamRecording(url, res) {
+        if (!url || url === 'undefined' || url === 'null' || url === '') {
+            console.error('⚠️ Proxy Error: Request received with empty/invalid URL');
+            return res.status(400).send('Recording URL is required');
         }
-        const cleanUrl = recordingUrl.replace('.json', '');
-        console.log('📡 Proxying request to:', cleanUrl);
         try {
-            const response = await fetch(cleanUrl, {
+            console.log(`🎙️ Proxying Twilio Audio Stream: ${url}`);
+            const response = await fetch(url, {
                 headers: {
                     Authorization: 'Basic ' +
                         Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64'),
                 },
             });
             if (!response.ok) {
-                console.error('❌ Twilio returned:', response.status, response.statusText);
-                return res.status(500).send('Twilio request failed');
+                console.error(`❌ Twilio Auth/Fetch Failed: ${response.status}`);
+                return res
+                    .status(response.status)
+                    .send('Could not fetch audio from Twilio');
             }
-            const arrayBuffer = await response.arrayBuffer();
-            const buffer = Buffer.from(arrayBuffer);
             res.set({
                 'Content-Type': 'audio/wav',
-                'Content-Length': buffer.length,
+                'Transfer-Encoding': 'chunked',
+                'Access-Control-Allow-Origin': '*',
             });
-            return res.send(buffer);
+            if (response.body) {
+                const body = node_stream_1.Readable.fromWeb(response.body);
+                body.pipe(res);
+            }
         }
         catch (error) {
-            console.error('❌ Proxy Crash:', error);
-            return res.status(500).send('Internal Server Error');
+            console.error('❌ Proxy Crash Details:', error.message);
+            if (!res.headersSent) {
+                res.status(500).send('Internal Server Error during audio proxy');
+            }
         }
-    }
-    async testAudio(res) {
-        console.log('🚀 TEST ROUTE HIT!');
-        return res.send('SERVER IS WORKING');
     }
     getClinicCalls(clinicId) {
         return this.callsService.getHistoryByBusiness(clinicId);
@@ -128,13 +131,6 @@ __decorate([
     __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], CallsController.prototype, "streamRecording", null);
-__decorate([
-    (0, common_1.Get)('test-audio'),
-    __param(0, (0, common_1.Res)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], CallsController.prototype, "testAudio", null);
 __decorate([
     (0, common_1.Get)(':clinicId'),
     __param(0, (0, common_1.Param)('clinicId')),
