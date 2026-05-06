@@ -29,15 +29,23 @@ let LeadsController = class LeadsController {
         this.configStore = configStore;
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
-    handleIncomingCall(body) {
-        console.log('--- TWILIO WEBHOOK DEBUG ---');
-        console.log('Full Body:', JSON.stringify(body));
-        console.log('From Number:', body.From);
-        console.log('Call SID:', body.CallSid);
+    async handleIncomingCall(body) {
         const from = body.From;
         const sid = body.CallSid;
         if (from && sid) {
             this.voiceService.setCallerData(sid, from);
+            try {
+                await this.client.calls(sid).recordings.create({
+                    recordingStatusCallback: `https://${process.env.SERVER_URL}/leads/recording-callback`,
+                    recordingStatusCallbackMethod: 'POST',
+                    trim: 'trim-silence',
+                    playBeep: false
+                });
+                console.log(`✨ Background recording initiated for: ${sid}`);
+            }
+            catch (err) {
+                console.error('❌ Failed to start background recording:', err.message);
+            }
         }
         return `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
@@ -48,18 +56,20 @@ let LeadsController = class LeadsController {
     }
     async updateConfig(body) {
         this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
-        console.log('✨ Bot Configuration Updated (Knowledge + Keywords + Greeting)');
+        console.log('✨ Sarah Updated: Knowledge + Keywords + Greeting');
         return { success: true };
     }
     async handleRecordingCallback(body) {
-        const { RecordingUrl, CallSid } = body;
-        if (RecordingUrl) {
-            const finalUrl = `${RecordingUrl}.wav`;
+        const url = body.RecordingUrl;
+        const sid = body.CallSid;
+        if (url && sid) {
+            const finalUrl = url.endsWith('.wav') ? url : `${url}.wav`;
             try {
-                await this.callsService.updateCallRecording(CallSid, finalUrl);
+                console.log(`💾 Saving Recording: ${finalUrl} to SID: ${sid}`);
+                await this.callsService.updateCallRecording(sid, finalUrl);
             }
             catch (error) {
-                console.error('❌ DB Update Error:', error.message);
+                console.error('❌ DB Recording Update Error:', error.message);
             }
         }
         return { status: 'received' };
@@ -79,7 +89,7 @@ __decorate([
     __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", void 0)
+    __metadata("design:returntype", Promise)
 ], LeadsController.prototype, "handleIncomingCall", null);
 __decorate([
     (0, common_1.Post)('update-config'),

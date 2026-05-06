@@ -20,22 +20,34 @@ export class LeadsController {
     );
   }
 
+  /**
+   * 📞 Handle Incoming Call
+   * Triggers parallel recording and starts the Media Stream
+   */
   @Post('incoming-call')
   @Header('Content-Type', 'text/xml')
-  handleIncomingCall(@Body() body: any) {
-    // 💡 CHECK YOUR RENDER LOGS FOR THIS:
-    console.log('--- TWILIO WEBHOOK DEBUG ---');
-    console.log('Full Body:', JSON.stringify(body));
-    console.log('From Number:', body.From);
-    console.log('Call SID:', body.CallSid);
-
+  async handleIncomingCall(@Body() body: any) {
     const from = body.From;
     const sid = body.CallSid;
 
     if (from && sid) {
       this.voiceService.setCallerData(sid, from);
+
+      try {
+        // @ts-ignore
+        await this.client.calls(sid).recordings.create({
+          recordingStatusCallback: `https://${process.env.SERVER_URL}/leads/recording-callback`,
+          recordingStatusCallbackMethod: 'POST',
+          trim: 'trim-silence',
+          playBeep: false
+        });
+        console.log(`✨ Background recording initiated for: ${sid}`);
+      } catch (err) {
+        console.error('❌ Failed to start background recording:', err.message);
+      }
     }
 
+    // 🧠 STEP 2: Return TwiML to connect to Sarah's Brain
     return `<?xml version="1.0" encoding="UTF-8"?>
     <Response>
       <Connect>
@@ -44,35 +56,49 @@ export class LeadsController {
     </Response>`;
   }
 
+  /**
+   * 💾 Sync Bot Configuration from Dashboard
+   */
   @Post('update-config')
   async updateConfig(
     @Body() body: { knowledge: string; keywords: string; greeting: string },
   ) {
     this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
-    console.log(
-      '✨ Bot Configuration Updated (Knowledge + Keywords + Greeting)',
-    );
+    console.log('✨ Sarah Updated: Knowledge + Keywords + Greeting');
     return { success: true };
   }
 
+  /**
+   * 🎙️ Update Database with the Recording URL once call ends
+   */
   @Post('recording-callback')
   async handleRecordingCallback(@Body() body: any) {
-    const { RecordingUrl, CallSid } = body;
-    if (RecordingUrl) {
-      const finalUrl = `${RecordingUrl}.wav`;
+    // Twilio uses PascalCase for these keys in the body
+    const url = body.RecordingUrl;
+    const sid = body.CallSid;
+
+    if (url && sid) {
+      // Append .wav so the browser audio player works immediately
+      const finalUrl = url.endsWith('.wav') ? url : `${url}.wav`;
+      
       try {
-        await this.callsService.updateCallRecording(CallSid, finalUrl);
+        console.log(`💾 Saving Recording: ${finalUrl} to SID: ${sid}`);
+        await this.callsService.updateCallRecording(sid, finalUrl);
       } catch (error) {
-        console.error('❌ DB Update Error:', error.message);
+        console.error('❌ DB Recording Update Error:', error.message);
       }
     }
     return { status: 'received' };
   }
+
+  /**
+   * ⚙️ Fetch current config for Dashboard UI
+   */
   @Get('config')
   async getConfig() {
     return {
       knowledge: this.configStore.getKnowledge(),
-      keywords: this.configStore.getKeywords().join(', '), // Convert array back to string for the input
+      keywords: this.configStore.getKeywords().join(', '), 
       greeting: this.configStore.getGreeting(),
     };
   }

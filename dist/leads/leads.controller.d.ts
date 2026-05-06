@@ -7,7 +7,7 @@ export declare class LeadsController {
     private readonly configStore;
     private client;
     constructor(callsService: CallsService, voiceService: VoiceService, configStore: ConfigStore);
-    handleIncomingCall(body: any): string;
+    handleIncomingCall(body: any): Promise<string>;
     updateConfig(body: {
         knowledge: string;
         keywords: string;
