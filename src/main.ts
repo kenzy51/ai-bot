@@ -13,21 +13,26 @@ async function bootstrap() {
     logger: ['error', 'warn', 'log'],
   });
 
-  // 1. MUST come before other middleware to ensure Twilio's Form-Url-Encoded 
-  // data is parsed before the request hits your controllers.
-  app.use(express.json());
-  app.use(express.urlencoded({ extended: true }));
+  // 1. Properly handle both JSON and Form-Url-Encoded data (Twilio Standard)
+  app.use(express.json({ limit: '10mb' }));
+  app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
-  app.enableCors();
+  // 2. Enable CORS for your Next.js Dashboard
+  app.enableCors({
+    origin: '*', // In production, replace with https://dashboard.fusionaiagency.com
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+    credentials: true,
+  });
   
-  // 2. Ensure your WsAdapter is correctly bound
+  // 3. Bind the WebSocket adapter for the /media-stream
   app.useWebSocketAdapter(new WsAdapter(app));
 
-  // 3. Use process.env.PORT for Render compatibility
   const port = process.env.PORT || 3003;
-  await app.listen(port, '0.0.0.0'); // Adding '0.0.0.0' helps with Render routing
   
-  console.log(`🚀 Server running on port ${port}`);
+  // 4. Bind to 0.0.0.0 to ensure Render's internal network can route to the app
+  await app.listen(port, '0.0.0.0');
+  
+  console.log(`🚀 Fusion AI Backend live on port ${port}`);
 }
 
 bootstrap().catch((err) => {

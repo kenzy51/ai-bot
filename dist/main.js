@@ -48,13 +48,17 @@ async function bootstrap() {
     const app = await core_1.NestFactory.create(app_module_1.AppModule, {
         logger: ['error', 'warn', 'log'],
     });
-    app.use(express.json());
-    app.use(express.urlencoded({ extended: true }));
-    app.enableCors();
+    app.use(express.json({ limit: '10mb' }));
+    app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+    app.enableCors({
+        origin: '*',
+        methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
+        credentials: true,
+    });
     app.useWebSocketAdapter(new platform_ws_1.WsAdapter(app));
     const port = process.env.PORT || 3003;
     await app.listen(port, '0.0.0.0');
-    console.log(`🚀 Server running on port ${port}`);
+    console.log(`🚀 Fusion AI Backend live on port ${port}`);
 }
 bootstrap().catch((err) => {
     console.error('Fatal Error during bootstrap:', err);

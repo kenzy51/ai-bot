@@ -71,25 +71,37 @@ export class LeadsController {
   /**
    * 🎙️ Update Database with the Recording URL once call ends
    */
-  @Post('recording-callback')
-  async handleRecordingCallback(@Body() body: any) {
-    // Twilio uses PascalCase for these keys in the body
-    const url = body.RecordingUrl;
-    const sid = body.CallSid;
+@Post('recording-callback')
+async handleRecordingCallback(@Body() body: any) {
+  // 💡 LOG THE ENTIRE BODY TO RENDER LOGS
+  // This is the only way to see if the data is actually arriving
+  console.log('--- TWILIO CALLBACK ARRIVED ---');
+  console.log('Raw Body:', body);
 
-    if (url && sid) {
-      // Append .wav so the browser audio player works immediately
-      const finalUrl = url.endsWith('.wav') ? url : `${url}.wav`;
-      
-      try {
-        console.log(`💾 Saving Recording: ${finalUrl} to SID: ${sid}`);
-        await this.callsService.updateCallRecording(sid, finalUrl);
-      } catch (error) {
-        console.error('❌ DB Recording Update Error:', error.message);
-      }
-    }
-    return { status: 'received' };
+  // Twilio uses PascalCase for keys
+  const url = body.RecordingUrl; 
+  const sid = body.CallSid;
+
+  if (!url || !sid) {
+    console.error('❌ Callback missing data:', { url, sid });
+    return { status: 'missing_data' };
   }
+
+  const finalUrl = `${url}.wav`;
+  
+  try {
+    const updated = await this.callsService.updateCallRecording(sid, finalUrl);
+    if (updated) {
+      console.log(`✅ Database updated for SID: ${sid}`);
+    } else {
+      console.warn(`⚠️ No record found in DB for SID: ${sid}`);
+    }
+  } catch (error) {
+    console.error('❌ DB Update Error:', error.message);
+  }
+
+  return { status: 'received' };
+}
 
   /**
    * ⚙️ Fetch current config for Dashboard UI

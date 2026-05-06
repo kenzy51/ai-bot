@@ -60,17 +60,26 @@ let LeadsController = class LeadsController {
         return { success: true };
     }
     async handleRecordingCallback(body) {
+        console.log('--- TWILIO CALLBACK ARRIVED ---');
+        console.log('Raw Body:', body);
         const url = body.RecordingUrl;
         const sid = body.CallSid;
-        if (url && sid) {
-            const finalUrl = url.endsWith('.wav') ? url : `${url}.wav`;
-            try {
-                console.log(`💾 Saving Recording: ${finalUrl} to SID: ${sid}`);
-                await this.callsService.updateCallRecording(sid, finalUrl);
+        if (!url || !sid) {
+            console.error('❌ Callback missing data:', { url, sid });
+            return { status: 'missing_data' };
+        }
+        const finalUrl = `${url}.wav`;
+        try {
+            const updated = await this.callsService.updateCallRecording(sid, finalUrl);
+            if (updated) {
+                console.log(`✅ Database updated for SID: ${sid}`);
             }
-            catch (error) {
-                console.error('❌ DB Recording Update Error:', error.message);
+            else {
+                console.warn(`⚠️ No record found in DB for SID: ${sid}`);
             }
+        }
+        catch (error) {
+            console.error('❌ DB Update Error:', error.message);
         }
         return { status: 'received' };
     }

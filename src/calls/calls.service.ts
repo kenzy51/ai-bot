@@ -16,15 +16,18 @@ export class CallsService {
   }
 
   // 2. Specialized method for the Twilio Recording Webhook
-  async updateCallRecording(callSid: string, recordingUrl: string) {
-    console.log(`💾 Persisting recording URL for SID: ${callSid}`);
-    
-    return await this.callModel.findOneAndUpdate(
-      { callSid: callSid },
-      { $set: { recordingUrl: recordingUrl } },
-      { upsert: true, new: true }
-    ).exec();
-  }
+ async updateCallRecording(callSid: string, recordingUrl: string) {
+  console.log(`📡 WEBHOOK HIT for SID: ${callSid}`);
+  
+  const update = await this.callModel.findOneAndUpdate(
+    { callSid: callSid },
+    { $set: { recordingUrl: recordingUrl } },
+    { upsert: true, new: true }
+  ).exec();
+
+  console.log("💾 Database updated:", update);
+  return update;
+}
 
   async getHistoryByBusiness(businessId: string): Promise<Call[]> {
     return this.callModel

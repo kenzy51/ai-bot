@@ -26,8 +26,10 @@ let CallsService = class CallsService {
         return await this.callModel.findOneAndUpdate({ callSid: callData.callSid }, { $set: callData }, { upsert: true, new: true }).exec();
     }
     async updateCallRecording(callSid, recordingUrl) {
-        console.log(`💾 Persisting recording URL for SID: ${callSid}`);
-        return await this.callModel.findOneAndUpdate({ callSid: callSid }, { $set: { recordingUrl: recordingUrl } }, { upsert: true, new: true }).exec();
+        console.log(`📡 WEBHOOK HIT for SID: ${callSid}`);
+        const update = await this.callModel.findOneAndUpdate({ callSid: callSid }, { $set: { recordingUrl: recordingUrl } }, { upsert: true, new: true }).exec();
+        console.log("💾 Database updated:", update);
+        return update;
     }
     async getHistoryByBusiness(businessId) {
         return this.callModel
