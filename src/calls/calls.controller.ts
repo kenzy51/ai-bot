@@ -31,31 +31,32 @@ export class CallsController {
   /**
    * 📞 Handle Incoming Call
    */
-  @Post('incoming-call')
+@Post('incoming-call')
   @Header('Content-Type', 'text/xml')
   async handleIncomingCall(@Body() body: any) {
-    // 💡 Twilio sends data in PascalCase
-    const from = body.From;
-    const sid = body.CallSid;
+    // 💡 Robust extraction to handle different parsing scenarios
+    const from = body.From || body.from;
+    const sid = body.CallSid || body.callSid;
 
-    console.log(`📞 Incoming Call from: ${from} | SID: ${sid}`);
+    console.log(`📞 RECEIVED CALL DATA - From: ${from}, SID: ${sid}`);
 
     if (from && sid) {
-      // 💡 Await this to ensure the phone number is saved BEFORE the recording ends
+      // 💡 Important: Use await to ensure the DB record exists 
+      // before the Gemini stream or Recording starts.
       await this.voiceService.setCallerData(sid, from);
-
+      
       try {
-        // @ts-ignore
         await this.client.calls(sid).recordings.create({
           recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
           recordingStatusCallbackMethod: 'POST',
           trim: 'trim-silence',
-          playBeep: false,
         });
-        console.log(`✨ Background recording initiated for: ${sid}`);
+        console.log(`✨ Recording triggered for SID: ${sid}`);
       } catch (err) {
-        console.error('❌ Failed to start background recording:', err.message);
+        console.error('❌ Recording trigger failed:', err.message);
       }
+    } else {
+      console.warn('⚠️ WARNING: Incoming call arrived without From or CallSid. Body:', body);
     }
 
     return `<?xml version="1.0" encoding="UTF-8"?>
