@@ -11,7 +11,6 @@ export class LeadsController {
 
   constructor(
     private readonly callsService: CallsService,
-    private readonly voiceService: VoiceService,
     private readonly configStore: ConfigStore,
   ) {
     this.client = twilio(
@@ -20,6 +19,7 @@ export class LeadsController {
     );
   }
 
+ 
 
   /**
    * 💾 Sync Bot Configuration from Dashboard

@@ -16,21 +16,42 @@ exports.CallsController = void 0;
 const common_1 = require("@nestjs/common");
 const calls_service_1 = require("./calls.service");
 const node_stream_1 = require("node:stream");
+const voice_service_1 = require("../ai-agent/gemini/voice.service");
+const twilio = require("twilio");
 let CallsController = class CallsController {
     callsService;
-    constructor(callsService) {
+    voiceService;
+    client;
+    constructor(callsService, voiceService) {
         this.callsService = callsService;
+        this.voiceService = voiceService;
+        this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
-    async handleIncoming(res) {
-        const serverUrl = process.env.SERVER_URL || 'fusion-ai-bot.onrender.com';
-        const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Connect>
-    <Stream url="wss://${serverUrl}/media-stream" />
-  </Connect>
-</Response>`.trim();
-        res.set('Content-Type', 'text/xml');
-        return res.status(200).send(twiml);
+    async handleIncomingCall(body) {
+        const from = body.From;
+        const sid = body.CallSid;
+        console.log(`📞 Incoming Call from: ${from} | SID: ${sid}`);
+        if (from && sid) {
+            await this.voiceService.setCallerData(sid, from);
+            try {
+                await this.client.calls(sid).recordings.create({
+                    recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
+                    recordingStatusCallbackMethod: 'POST',
+                    trim: 'trim-silence',
+                    playBeep: false,
+                });
+                console.log(`✨ Background recording initiated for: ${sid}`);
+            }
+            catch (err) {
+                console.error('❌ Failed to start background recording:', err.message);
+            }
+        }
+        return `<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+      <Connect>
+        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
+      </Connect>
+    </Response>`;
     }
     async getTransferDial(res) {
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -63,23 +84,17 @@ let CallsController = class CallsController {
     }
     async streamRecording(url, res) {
         if (!url || url === 'undefined' || url === 'null' || url === '') {
-            console.error('⚠️ Proxy Error: Request received with empty/invalid URL');
             return res.status(400).send('Recording URL is required');
         }
         try {
-            console.log(`🎙️ Proxying Twilio Audio Stream: ${url}`);
             const response = await fetch(url, {
                 headers: {
                     Authorization: 'Basic ' +
                         Buffer.from(`${process.env.TWILIO_ACCOUNT_SID}:${process.env.TWILIO_AUTH_TOKEN}`).toString('base64'),
                 },
             });
-            if (!response.ok) {
-                console.error(`❌ Twilio Auth/Fetch Failed: ${response.status}`);
-                return res
-                    .status(response.status)
-                    .send('Could not fetch audio from Twilio');
-            }
+            if (!response.ok)
+                return res.status(response.status).send('Fetch failed');
             res.set({
                 'Content-Type': 'audio/wav',
                 'Transfer-Encoding': 'chunked',
@@ -91,10 +106,9 @@ let CallsController = class CallsController {
             }
         }
         catch (error) {
-            console.error('❌ Proxy Crash Details:', error.message);
-            if (!res.headersSent) {
-                res.status(500).send('Internal Server Error during audio proxy');
-            }
+            console.error('❌ Proxy Crash:', error.message);
+            if (!res.headersSent)
+                res.status(500).send('Internal Error');
         }
     }
     getClinicCalls(clinicId) {
@@ -104,11 +118,12 @@ let CallsController = class CallsController {
 exports.CallsController = CallsController;
 __decorate([
     (0, common_1.Post)('incoming-call'),
-    __param(0, (0, common_1.Res)()),
+    (0, common_1.Header)('Content-Type', 'text/xml'),
+    __param(0, (0, common_1.Body)()),
     __metadata("design:type", Function),
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
-], CallsController.prototype, "handleIncoming", null);
+], CallsController.prototype, "handleIncomingCall", null);
 __decorate([
     (0, common_1.Post)('transfer-dial'),
     __param(0, (0, common_1.Res)()),
@@ -140,6 +155,7 @@ __decorate([
 ], CallsController.prototype, "getClinicCalls", null);
 exports.CallsController = CallsController = __decorate([
     (0, common_1.Controller)('calls'),
-    __metadata("design:paramtypes", [calls_service_1.CallsService])
+    __metadata("design:paramtypes", [calls_service_1.CallsService,
+        voice_service_1.VoiceService])
 ], CallsController);
 //# sourceMappingURL=calls.controller.js.map

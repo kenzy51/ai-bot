@@ -15,17 +15,14 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.LeadsController = void 0;
 const common_1 = require("@nestjs/common");
 const config_1 = require("../ai-agent/config/config");
-const voice_service_1 = require("../ai-agent/gemini/voice.service");
 const calls_service_1 = require("../calls/calls.service");
 const twilio = require("twilio");
 let LeadsController = class LeadsController {
     callsService;
-    voiceService;
     configStore;
     client;
-    constructor(callsService, voiceService, configStore) {
+    constructor(callsService, configStore) {
         this.callsService = callsService;
-        this.voiceService = voiceService;
         this.configStore = configStore;
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
@@ -59,7 +56,6 @@ __decorate([
 exports.LeadsController = LeadsController = __decorate([
     (0, common_1.Controller)('leads'),
     __metadata("design:paramtypes", [calls_service_1.CallsService,
-        voice_service_1.VoiceService,
         config_1.ConfigStore])
 ], LeadsController);
 //# sourceMappingURL=leads.controller.js.map

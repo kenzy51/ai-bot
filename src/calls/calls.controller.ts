@@ -1,35 +1,73 @@
-import { Body, Controller, Get, Param, Post, Query, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Header,
+  Param,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { CallsService } from './calls.service';
 import { Readable } from 'node:stream';
 import { Response } from 'express';
+import { VoiceService } from 'src/ai-agent/gemini/voice.service';
+import twilio = require('twilio');
 
 @Controller('calls')
 export class CallsController {
-  constructor(private readonly callsService: CallsService) {}
+  private client: twilio.Twilio; 
+
+  constructor(
+    private readonly callsService: CallsService,
+    private readonly voiceService: VoiceService,
+  ) {
+    this.client = twilio(
+      process.env.TWILIO_ACCOUNT_SID,
+      process.env.TWILIO_AUTH_TOKEN,
+    );
+  }
 
   /**
-   * 📞 Inbound Call TwiML
-   * Connects the caller to the AI Media Stream.
-   * Note: Recording is triggered via API in the LeadsController.
+   * 📞 Handle Incoming Call
    */
   @Post('incoming-call')
-  async handleIncoming(@Res() res: any) {
-    const serverUrl = process.env.SERVER_URL || 'fusion-ai-bot.onrender.com';
+  @Header('Content-Type', 'text/xml')
+  async handleIncomingCall(@Body() body: any) {
+    // 💡 Twilio sends data in PascalCase
+    const from = body.From;
+    const sid = body.CallSid;
 
-    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-<Response>
-  <Connect>
-    <Stream url="wss://${serverUrl}/media-stream" />
-  </Connect>
-</Response>`.trim();
+    console.log(`📞 Incoming Call from: ${from} | SID: ${sid}`);
 
-    res.set('Content-Type', 'text/xml');
-    return res.status(200).send(twiml);
+    if (from && sid) {
+      // 💡 Await this to ensure the phone number is saved BEFORE the recording ends
+      await this.voiceService.setCallerData(sid, from);
+
+      try {
+        // @ts-ignore
+        await this.client.calls(sid).recordings.create({
+          recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
+          recordingStatusCallbackMethod: 'POST',
+          trim: 'trim-silence',
+          playBeep: false,
+        });
+        console.log(`✨ Background recording initiated for: ${sid}`);
+      } catch (err) {
+        console.error('❌ Failed to start background recording:', err.message);
+      }
+    }
+
+    return `<?xml version="1.0" encoding="UTF-8"?>
+    <Response>
+      <Connect>
+        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
+      </Connect>
+    </Response>`;
   }
 
   /**
    * 🔀 Transfer Dial TwiML
-   * Used when Sarah transfers the caller to the physical office.
    */
   @Post('transfer-dial')
   async getTransferDial(@Res() res: any) {
@@ -49,14 +87,12 @@ export class CallsController {
 
   /**
    * 🎙️ Recording Callback
-   * Receives the metadata from Twilio and updates the database.
    */
   @Post('recording-callback')
   async handleRecordingCallback(@Body() body: any) {
     const { CallSid, RecordingUrl } = body;
 
     if (RecordingUrl && CallSid) {
-      // Ensure the URL ends in .wav so the browser audio player works
       const directUrl = RecordingUrl.endsWith('.wav')
         ? RecordingUrl
         : `${RecordingUrl}.wav`;
@@ -75,22 +111,16 @@ export class CallsController {
 
   /**
    * 🔊 Audio Stream Proxy
-   * Fetches the private recording from Twilio and streams it to the Dashboard.
    */
   @Get('stream-recording')
   async streamRecording(@Query('url') url: string, @Res() res: Response | any) {
-    // 💡 GUARD: Prevent "TypeError: Invalid URL" crash if URL is empty or null
     if (!url || url === 'undefined' || url === 'null' || url === '') {
-      console.error('⚠️ Proxy Error: Request received with empty/invalid URL');
       return res.status(400).send('Recording URL is required');
     }
 
     try {
-      console.log(`🎙️ Proxying Twilio Audio Stream: ${url}`);
-
       const response = await fetch(url, {
         headers: {
-          // Required to access private Twilio recordings
           Authorization:
             'Basic ' +
             Buffer.from(
@@ -99,36 +129,24 @@ export class CallsController {
         },
       });
 
-      if (!response.ok) {
-        console.error(`❌ Twilio Auth/Fetch Failed: ${response.status}`);
-        return res
-          .status(response.status)
-          .send('Could not fetch audio from Twilio');
-      }
+      if (!response.ok) return res.status(response.status).send('Fetch failed');
 
-      // Set headers for smooth browser playback
       res.set({
         'Content-Type': 'audio/wav',
         'Transfer-Encoding': 'chunked',
-        'Access-Control-Allow-Origin': '*', // Allows Next.js to read the stream
+        'Access-Control-Allow-Origin': '*',
       });
 
-      // Efficiently pipe the web stream to the response
       if (response.body) {
         const body = Readable.fromWeb(response.body as any);
         body.pipe(res);
       }
     } catch (error) {
-      console.error('❌ Proxy Crash Details:', error.message);
-      if (!res.headersSent) {
-        res.status(500).send('Internal Server Error during audio proxy');
-      }
+      console.error('❌ Proxy Crash:', error.message);
+      if (!res.headersSent) res.status(500).send('Internal Error');
     }
   }
 
-  /**
-   * 📋 Fetch History
-   */
   @Get(':clinicId')
   getClinicCalls(@Param('clinicId') clinicId: string) {
     return this.callsService.getHistoryByBusiness(clinicId);

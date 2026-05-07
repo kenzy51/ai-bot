@@ -1,9 +1,12 @@
 import { CallsService } from './calls.service';
 import { Response } from 'express';
+import { VoiceService } from 'src/ai-agent/gemini/voice.service';
 export declare class CallsController {
     private readonly callsService;
-    constructor(callsService: CallsService);
-    handleIncoming(res: any): Promise<any>;
+    private readonly voiceService;
+    private client;
+    constructor(callsService: CallsService, voiceService: VoiceService);
+    handleIncomingCall(body: any): Promise<string>;
     getTransferDial(res: any): Promise<any>;
     handleRecordingCallback(body: any): Promise<{
         status: string;
