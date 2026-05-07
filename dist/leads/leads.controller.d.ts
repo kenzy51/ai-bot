@@ -15,9 +15,6 @@ export declare class LeadsController {
     }): Promise<{
         success: boolean;
     }>;
-    handleRecordingCallback(body: any): Promise<{
-        status: string;
-    }>;
     getConfig(): Promise<{
         knowledge: string;
         keywords: string;

@@ -36,7 +36,7 @@ let LeadsController = class LeadsController {
             this.voiceService.setCallerData(sid, from);
             try {
                 await this.client.calls(sid).recordings.create({
-                    recordingStatusCallback: `https://${process.env.SERVER_URL}/leads/recording-callback`,
+                    recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
                     recordingStatusCallbackMethod: 'POST',
                     trim: 'trim-silence',
                     playBeep: false
@@ -58,30 +58,6 @@ let LeadsController = class LeadsController {
         this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
         console.log('✨ Sarah Updated: Knowledge + Keywords + Greeting');
         return { success: true };
-    }
-    async handleRecordingCallback(body) {
-        console.log('--- TWILIO CALLBACK ARRIVED ---');
-        console.log('Raw Body:', body);
-        const url = body.RecordingUrl;
-        const sid = body.CallSid;
-        if (!url || !sid) {
-            console.error('❌ Callback missing data:', { url, sid });
-            return { status: 'missing_data' };
-        }
-        const finalUrl = `${url}.wav`;
-        try {
-            const updated = await this.callsService.updateCallRecording(sid, finalUrl);
-            if (updated) {
-                console.log(`✅ Database updated for SID: ${sid}`);
-            }
-            else {
-                console.warn(`⚠️ No record found in DB for SID: ${sid}`);
-            }
-        }
-        catch (error) {
-            console.error('❌ DB Update Error:', error.message);
-        }
-        return { status: 'received' };
     }
     async getConfig() {
         return {
@@ -107,13 +83,6 @@ __decorate([
     __metadata("design:paramtypes", [Object]),
     __metadata("design:returntype", Promise)
 ], LeadsController.prototype, "updateConfig", null);
-__decorate([
-    (0, common_1.Post)('recording-callback'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], LeadsController.prototype, "handleRecordingCallback", null);
 __decorate([
     (0, common_1.Get)('config'),
     __metadata("design:type", Function),
