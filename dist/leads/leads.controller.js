@@ -29,31 +29,6 @@ let LeadsController = class LeadsController {
         this.configStore = configStore;
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
-    async handleIncomingCall(body) {
-        const from = body.From;
-        const sid = body.CallSid;
-        if (from && sid) {
-            this.voiceService.setCallerData(sid, from);
-            try {
-                await this.client.calls(sid).recordings.create({
-                    recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
-                    recordingStatusCallbackMethod: 'POST',
-                    trim: 'trim-silence',
-                    playBeep: false
-                });
-                console.log(`✨ Background recording initiated for: ${sid}`);
-            }
-            catch (err) {
-                console.error('❌ Failed to start background recording:', err.message);
-            }
-        }
-        return `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Connect>
-        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
-      </Connect>
-    </Response>`;
-    }
     async updateConfig(body) {
         this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
         console.log('✨ Sarah Updated: Knowledge + Keywords + Greeting');
@@ -68,14 +43,6 @@ let LeadsController = class LeadsController {
     }
 };
 exports.LeadsController = LeadsController;
-__decorate([
-    (0, common_1.Post)('incoming-call'),
-    (0, common_1.Header)('Content-Type', 'text/xml'),
-    __param(0, (0, common_1.Body)()),
-    __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
-    __metadata("design:returntype", Promise)
-], LeadsController.prototype, "handleIncomingCall", null);
 __decorate([
     (0, common_1.Post)('update-config'),
     __param(0, (0, common_1.Body)()),
