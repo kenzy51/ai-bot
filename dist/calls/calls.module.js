@@ -12,19 +12,19 @@ const calls_service_1 = require("./calls.service");
 const calls_controller_1 = require("./calls.controller");
 const mongoose_1 = require("@nestjs/mongoose");
 const call_schema_1 = require("./schemas/call.schema");
+const voice_service_1 = require("../ai-agent/gemini/voice.service");
+const config_1 = require("../ai-agent/config/config");
 let CallsModule = class CallsModule {
 };
 exports.CallsModule = CallsModule;
 exports.CallsModule = CallsModule = __decorate([
     (0, common_1.Module)({
         imports: [
-            mongoose_1.MongooseModule.forFeature([{ name: call_schema_1.Call.name, schema: call_schema_1.CallSchema }])
+            mongoose_1.MongooseModule.forFeature([{ name: call_schema_1.Call.name, schema: call_schema_1.CallSchema }]),
         ],
-        providers: [calls_service_1.CallsService],
+        providers: [calls_service_1.CallsService, voice_service_1.VoiceService, config_1.ConfigStore],
         controllers: [calls_controller_1.CallsController],
-        exports: [
-            calls_service_1.CallsService
-        ]
+        exports: [calls_service_1.CallsService],
     })
 ], CallsModule);
 //# sourceMappingURL=calls.module.js.map
