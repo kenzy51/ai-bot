@@ -36,15 +36,32 @@ let VoiceGateway = class VoiceGateway {
             if (greetingStarted || !streamSid || dgLive.getReadyState() !== 1)
                 return;
             greetingStarted = true;
-            console.log('✅ Deepgram & Twilio Ready. Triggering Greeting...');
             const greeting = await this.voiceService.getInitialGreeting();
             chatHistory.push({ role: 'assistant', content: greeting });
             const audio = await this.voiceService.speak(greeting);
             sendAudioToTwilio(audio.toString('base64'));
         };
+        dgLive.on(sdk_1.LiveTranscriptionEvents.Transcript, async (data) => {
+            const transcript = data.channel.alternatives[0]?.transcript;
+            if (!data.is_final || !transcript || transcript.trim().length < 2)
+                return;
+            console.log(`👤 User: ${transcript}`);
+            twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
+            chatHistory.push({ role: 'user', content: transcript });
+            const aiResponse = await this.voiceService.generateResponse(transcript, chatHistory, (audioBuffer) => {
+                sendAudioToTwilio(audioBuffer.toString('base64'));
+            });
+            if (aiResponse) {
+                chatHistory.push({ role: 'assistant', content: aiResponse });
+                console.log(`🤖 Sarah: ${aiResponse}`);
+            }
+        });
         dgLive.on(sdk_1.LiveTranscriptionEvents.Open, () => {
             console.log('✅ Deepgram Socket Open');
             triggerGreeting();
+        });
+        dgLive.on(sdk_1.LiveTranscriptionEvents.Error, (err) => {
+            console.error('❌ Deepgram Error:', err);
         });
         twilioWs.on('message', async (data) => {
             const msg = JSON.parse(data);
@@ -53,11 +70,14 @@ let VoiceGateway = class VoiceGateway {
                 callSid = msg.start.callSid;
                 this.sessions.set(twilioWs, callSid);
                 this.voiceService.setCurrentCallSid(callSid);
-                console.log(`📞 Call Metadata Received: ${callSid}`);
+                console.log(`📞 Call Started: ${callSid}`);
                 triggerGreeting();
             }
-            if (msg.event === 'media' && dgLive.getReadyState() === 1) {
-                dgLive.send(Buffer.from(msg.media.payload, 'base64'));
+            if (msg.event === 'media') {
+                if (dgLive && dgLive.getReadyState() === 1) {
+                    const audioPayload = msg.media.payload;
+                    dgLive.send(Buffer.from(audioPayload, 'base64'));
+                }
             }
             if (msg.event === 'stop') {
                 console.log('🛑 Twilio stop event received');

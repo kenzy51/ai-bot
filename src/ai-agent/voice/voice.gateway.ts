@@ -17,8 +17,8 @@ export class VoiceGateway implements OnGatewayConnection, OnGatewayDisconnect {
 handleConnection(twilioWs: WebSocket) {
     let chatHistory: any[] = [];
     let streamSid: string = '';
-    let callSid: string = ''; // 💡 Move this to local scope
-    let greetingStarted = false; // 💡 Track to avoid double greeting
+    let callSid: string = ''; 
+    let greetingStarted = false; 
 
     const dgLive = this.voiceService.getDeepgramLive();
     this.chatHistories.set(twilioWs, chatHistory);
@@ -28,44 +28,73 @@ handleConnection(twilioWs: WebSocket) {
       twilioWs.send(JSON.stringify({ event: 'media', streamSid, media: { payload: base64Audio } }));
     };
 
-    // 💡 CREATE A HELPER FOR THE GREETING
     const triggerGreeting = async () => {
       if (greetingStarted || !streamSid || dgLive.getReadyState() !== 1) return;
       greetingStarted = true;
       
-      console.log('✅ Deepgram & Twilio Ready. Triggering Greeting...');
       const greeting = await this.voiceService.getInitialGreeting();
       chatHistory.push({ role: 'assistant', content: greeting });
       const audio = await this.voiceService.speak(greeting);
       sendAudioToTwilio(audio.toString('base64'));
     };
 
-    dgLive.on(LiveTranscriptionEvents.Open, () => {
-      console.log('✅ Deepgram Socket Open');
-      triggerGreeting(); // Try greeting, but it will wait for streamSid
+    // --- 1. THE MISSING TRANSCRIPTION LOGIC ---
+    dgLive.on(LiveTranscriptionEvents.Transcript, async (data) => {
+      const transcript = data.channel.alternatives[0]?.transcript;
+      
+      // Safety check: Only process final results with actual text
+      if (!data.is_final || !transcript || transcript.trim().length < 2) return;
+
+      console.log(`👤 User: ${transcript}`);
+      
+      // Stop Sarah from speaking if user interrupts (optional but good)
+      twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
+
+      chatHistory.push({ role: 'user', content: transcript });
+
+      const aiResponse = await this.voiceService.generateResponse(
+        transcript,
+        chatHistory,
+        (audioBuffer) => {
+          sendAudioToTwilio(audioBuffer.toString('base64'));
+        },
+      );
+
+      if (aiResponse) {
+        chatHistory.push({ role: 'assistant', content: aiResponse });
+        console.log(`🤖 Sarah: ${aiResponse}`);
+      }
     });
 
-    // ... (Your Transcription logic stays the same) ...
+    dgLive.on(LiveTranscriptionEvents.Open, () => {
+      console.log('✅ Deepgram Socket Open');
+      triggerGreeting();
+    });
 
+    dgLive.on(LiveTranscriptionEvents.Error, (err) => {
+      console.error('❌ Deepgram Error:', err);
+    });
+
+    // --- 2. THE TWILIO MESSAGE HANDLER ---
     twilioWs.on('message', async (data: string) => {
       const msg = JSON.parse(data);
+      
       if (msg.event === 'start') {
         streamSid = msg.start.streamSid;
         callSid = msg.start.callSid;
-
-        // 💡 Ensure VoiceService knows about this call IMMEDIATELY
         this.sessions.set(twilioWs, callSid);
         this.voiceService.setCurrentCallSid(callSid);
-
-        console.log(`📞 Call Metadata Received: ${callSid}`);
-        
-        // Now that we have the Sid, trigger the greeting if DG is open
+        console.log(`📞 Call Started: ${callSid}`);
         triggerGreeting(); 
       }
 
-      if (msg.event === 'media' && dgLive.getReadyState() === 1) {
-        // @ts-ignore
-        dgLive.send(Buffer.from(msg.media.payload, 'base64'));
+      if (msg.event === 'media') {
+        // Only forward audio if Deepgram is ready to listen
+        if (dgLive && dgLive.getReadyState() === 1) {
+          const audioPayload = msg.media.payload;
+          // @ts-ignore
+          dgLive.send(Buffer.from(audioPayload, 'base64'));
+        }
       }
 
       if (msg.event === 'stop') {
