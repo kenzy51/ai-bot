@@ -23,56 +23,44 @@ let VoiceGateway = class VoiceGateway {
     handleConnection(twilioWs) {
         let chatHistory = [];
         let streamSid = '';
+        let callSid = '';
+        let greetingStarted = false;
         const dgLive = this.voiceService.getDeepgramLive();
         this.chatHistories.set(twilioWs, chatHistory);
         const sendAudioToTwilio = (base64Audio) => {
             if (!streamSid)
                 return;
-            twilioWs.send(JSON.stringify({
-                event: 'media',
-                streamSid,
-                media: { payload: base64Audio },
-            }));
+            twilioWs.send(JSON.stringify({ event: 'media', streamSid, media: { payload: base64Audio } }));
         };
-        dgLive.on(sdk_1.LiveTranscriptionEvents.Open, async () => {
-            console.log('✅ Deepgram Ready');
+        const triggerGreeting = async () => {
+            if (greetingStarted || !streamSid || dgLive.getReadyState() !== 1)
+                return;
+            greetingStarted = true;
+            console.log('✅ Deepgram & Twilio Ready. Triggering Greeting...');
             const greeting = await this.voiceService.getInitialGreeting();
             chatHistory.push({ role: 'assistant', content: greeting });
             const audio = await this.voiceService.speak(greeting);
             sendAudioToTwilio(audio.toString('base64'));
+        };
+        dgLive.on(sdk_1.LiveTranscriptionEvents.Open, () => {
+            console.log('✅ Deepgram Socket Open');
+            triggerGreeting();
         });
-        dgLive.on(sdk_1.LiveTranscriptionEvents.Transcript, async (data) => {
-            const transcript = data.channel.alternatives[0]?.transcript;
-            if (!data.is_final || !transcript || transcript.trim().length < 3)
-                return;
-            console.log(`👤 User: ${transcript}`);
-            twilioWs.send(JSON.stringify({ event: 'clear', streamSid }));
-            chatHistory.push({ role: 'user', content: transcript });
-            const aiResponse = await this.voiceService.generateResponse(transcript, chatHistory, (audioBuffer) => {
-                sendAudioToTwilio(audioBuffer.toString('base64'));
-            });
-            if (aiResponse) {
-                chatHistory.push({ role: 'assistant', content: aiResponse });
-                console.log(`🤖 Jessica: ${aiResponse}`);
-            }
-        });
-        dgLive.on(sdk_1.LiveTranscriptionEvents.Error, (err) => {
-            console.error('❌ Deepgram Socket Error:', err);
-        });
-        twilioWs.on('message', (data) => {
+        twilioWs.on('message', async (data) => {
             const msg = JSON.parse(data);
             if (msg.event === 'start') {
                 streamSid = msg.start.streamSid;
-                const callSid = msg.start.callSid;
+                callSid = msg.start.callSid;
                 this.sessions.set(twilioWs, callSid);
                 this.voiceService.setCurrentCallSid(callSid);
-                console.log(`📞 Call Started: ${callSid}`);
+                console.log(`📞 Call Metadata Received: ${callSid}`);
+                triggerGreeting();
             }
             if (msg.event === 'media' && dgLive.getReadyState() === 1) {
                 dgLive.send(Buffer.from(msg.media.payload, 'base64'));
             }
             if (msg.event === 'stop') {
-                console.log('🛑 Twilio sent stop event');
+                console.log('🛑 Twilio stop event received');
                 dgLive.requestClose();
             }
         });

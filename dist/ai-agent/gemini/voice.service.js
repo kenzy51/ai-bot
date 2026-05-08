@@ -56,7 +56,9 @@ let VoiceService = class VoiceService {
         this.currentCallSid = sid;
     }
     setCallerData(sid, phone) {
+        this.currentCallerPhone = phone;
         this.callMap.set(sid, phone);
+        console.log(`💾 Map & Fallback Updated: ${sid} -> ${phone}`);
     }
     async onModuleInit() {
         console.log('🚀 Fusion AI Backend Started.');
@@ -276,9 +278,12 @@ ${dynamicKnowledge}
     }
     async logToDatabase(status, sid, history) {
         try {
+            let phoneNumber = this.callMap.get(sid);
+            if (!phoneNumber || phoneNumber === 'Unknown') {
+                phoneNumber = this.currentCallerPhone || 'Unknown';
+            }
+            console.log(`💾 DB SAVE FINAL CHECK - SID: ${sid} | Found Phone: ${phoneNumber}`);
             let dbSummary = 'Inquiry TRT';
-            const phoneNumber = this.callMap.get(sid) || 'Unknown';
-            console.log(`💾 DB SAVE ATTEMPT: Phone[${phoneNumber}] SID[${sid}]`);
             if (history.length >= 2) {
                 const sumResp = await this.groq.chat.completions.create({
                     model: 'llama-3.1-8b-instant',

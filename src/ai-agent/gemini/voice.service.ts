@@ -49,7 +49,9 @@ export class VoiceService implements OnModuleInit {
     this.currentCallSid = sid;
   }
   setCallerData(sid: string, phone: string) {
+    this.currentCallerPhone = phone;
     this.callMap.set(sid, phone);
+    console.log(`💾 Map & Fallback Updated: ${sid} -> ${phone}`);
   }
   async onModuleInit() {
     // await this.makeOutboundCall('+19297696545');
@@ -296,12 +298,19 @@ ${dynamicKnowledge}
   }
 
   private async logToDatabase(status: string, sid: string, history: any[]) {
+    
     try {
+      let phoneNumber = this.callMap.get(sid);
+
+      // 2. Emergency Fallback: If map fails, look for the most recent number set in the class
+      if (!phoneNumber || phoneNumber === 'Unknown') {
+        phoneNumber = this.currentCallerPhone || 'Unknown';
+      }
+
+      console.log(`💾 DB SAVE FINAL CHECK - SID: ${sid} | Found Phone: ${phoneNumber}`);
       let dbSummary = 'Inquiry TRT';
       
-      const phoneNumber = this.callMap.get(sid) || 'Unknown';
       
-      console.log(`💾 DB SAVE ATTEMPT: Phone[${phoneNumber}] SID[${sid}]`);
 
       if (history.length >= 2) {
         const sumResp = await this.groq.chat.completions.create({
