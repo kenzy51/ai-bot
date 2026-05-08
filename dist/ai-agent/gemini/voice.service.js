@@ -267,7 +267,9 @@ ${dynamicKnowledge}
         const transcriptString = finalHistory
             .map((h) => `<b>${h.role}:</b> ${h.content}`)
             .join('<br>');
-        await this.handleNotifications('Inquiry', new Date().toLocaleString(), transcriptString);
+        const phoneNumber = this.callMap.get(sid) || 'Unknown';
+        await this.handleNotifications(`Inquiry (${phoneNumber})`, new Date().toLocaleString(), transcriptString);
+        this.callMap.delete(sid);
         this.currentCallSid = '';
         this.callStatus = 'inquiry';
         this.isLogging = false;
@@ -276,7 +278,7 @@ ${dynamicKnowledge}
         try {
             let dbSummary = 'Inquiry TRT';
             const phoneNumber = this.callMap.get(sid) || 'Unknown';
-            console.log(`💾 DB SAVE: Phone[${phoneNumber}] SID[${sid}]`);
+            console.log(`💾 DB SAVE ATTEMPT: Phone[${phoneNumber}] SID[${sid}]`);
             if (history.length >= 2) {
                 const sumResp = await this.groq.chat.completions.create({
                     model: 'llama-3.1-8b-instant',
@@ -302,7 +304,7 @@ ${dynamicKnowledge}
                 status: status,
                 procedure: 'Logistics Inquiry',
             });
-            console.log(`✅ DB Updated: ${status}`);
+            console.log(`✅ DB Updated: ${status} for ${phoneNumber}`);
         }
         catch (e) {
             console.error('❌ DB Save failed:', e.message);

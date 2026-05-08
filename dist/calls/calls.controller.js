@@ -27,33 +27,27 @@ let CallsController = class CallsController {
         this.voiceService = voiceService;
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
-    async handleIncomingCall(body) {
-        const from = body.From || body.from;
-        const sid = body.CallSid || body.callSid;
-        console.log(`📞 RECEIVED CALL DATA - From: ${from}, SID: ${sid}`);
+    async handleIncoming(body, res) {
+        const from = body.From;
+        const sid = body.CallSid;
         if (from && sid) {
             await this.voiceService.setCallerData(sid, from);
-            try {
-                await this.client.calls(sid).recordings.create({
-                    recordingStatusCallback: `https://${process.env.SERVER_URL}/calls/recording-callback`,
-                    recordingStatusCallbackMethod: 'POST',
-                    trim: 'trim-silence',
-                });
-                console.log(`✨ Recording triggered for SID: ${sid}`);
-            }
-            catch (err) {
-                console.error('❌ Recording trigger failed:', err.message);
-            }
         }
-        else {
-            console.warn('⚠️ WARNING: Incoming call arrived without From or CallSid. Body:', body);
-        }
-        return `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Connect>
-        <Stream url="wss://${process.env.SERVER_URL}/media-stream" />
-      </Connect>
-    </Response>`;
+        const rawUrl = process.env.SERVER_URL || 'fusion-ai-bot.onrender.com';
+        const cleanUrl = rawUrl.replace('https://', '').replace('http://', '');
+        const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Start>
+    <Recording 
+      recordingStatusCallback="https://${process.env.SERVER_URL}/calls/recording-callback"
+    />
+  </Start>
+  <Connect>
+    <Stream url="wss://${cleanUrl}/media-stream" />
+  </Connect>
+</Response>`;
+        res.set('Content-Type', 'text/xml');
+        return res.status(200).send(twiml);
     }
     async getTransferDial(res) {
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -120,12 +114,12 @@ let CallsController = class CallsController {
 exports.CallsController = CallsController;
 __decorate([
     (0, common_1.Post)('incoming-call'),
-    (0, common_1.Header)('Content-Type', 'text/xml'),
     __param(0, (0, common_1.Body)()),
+    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
-], CallsController.prototype, "handleIncomingCall", null);
+], CallsController.prototype, "handleIncoming", null);
 __decorate([
     (0, common_1.Post)('transfer-dial'),
     __param(0, (0, common_1.Res)()),

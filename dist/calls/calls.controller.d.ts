@@ -6,7 +6,7 @@ export declare class CallsController {
     private readonly voiceService;
     private client;
     constructor(callsService: CallsService, voiceService: VoiceService);
-    handleIncomingCall(body: any): Promise<string>;
+    handleIncoming(body: any, res: any): Promise<any>;
     getTransferDial(res: any): Promise<any>;
     handleRecordingCallback(body: any): Promise<{
         status: string;

@@ -273,32 +273,39 @@ ${dynamicKnowledge}
   async onCallDisconnect(finalHistory: any[], sid: string) {
     if (this.isLogging) return;
     this.isLogging = true;
+
     await this.logToDatabase('inquiry', sid, finalHistory);
+
     const transcriptString = finalHistory
       .map((h) => `<b>${h.role}:</b> ${h.content}`)
       .join('<br>');
 
+    const phoneNumber = this.callMap.get(sid) || 'Unknown';
     await this.handleNotifications(
-      'Inquiry',
+      `Inquiry (${phoneNumber})`, 
       new Date().toLocaleString(),
       transcriptString,
     );
 
-    // 3. Reset state
+    // 3. Clean up the map to prevent memory leaks
+    this.callMap.delete(sid);
+    
     this.currentCallSid = '';
     this.callStatus = 'inquiry';
     this.isLogging = false;
   }
 
-  // HELPER: Handles DB Saving and Dynamic Summary
   private async logToDatabase(status: string, sid: string, history: any[]) {
     try {
       let dbSummary = 'Inquiry TRT';
+      
       const phoneNumber = this.callMap.get(sid) || 'Unknown';
-      console.log(`💾 DB SAVE: Phone[${phoneNumber}] SID[${sid}]`);
+      
+      console.log(`💾 DB SAVE ATTEMPT: Phone[${phoneNumber}] SID[${sid}]`);
+
       if (history.length >= 2) {
         const sumResp = await this.groq.chat.completions.create({
-          model: 'llama-3.1-8b-instant', // Updated to current model
+          model: 'llama-3.1-8b-instant',
           messages: [
             {
               role: 'system',
@@ -315,18 +322,23 @@ ${dynamicKnowledge}
 
       await this.callsService.saveCall({
         businessId: 'trt-international',
-        patientPhone: phoneNumber,
+        patientPhone: phoneNumber, 
         callSid: sid,
         summary: dbSummary,
         transcript: history.map((h) => `${h.role}: ${h.content}`).join('\n'),
         status: status,
         procedure: 'Logistics Inquiry',
       });
-      console.log(`✅ DB Updated: ${status}`);
+      
+      console.log(`✅ DB Updated: ${status} for ${phoneNumber}`);
     } catch (e) {
       console.error('❌ DB Save failed:', e.message);
     }
   }
+
+
+
+
   private async handleNotifications(
     procedure: string,
     timeStr: string,
