@@ -17,13 +17,15 @@ let AiAgentModule = class AiAgentModule {
 exports.AiAgentModule = AiAgentModule;
 exports.AiAgentModule = AiAgentModule = __decorate([
     (0, common_1.Module)({
+        imports: [
+            (0, common_1.forwardRef)(() => calls_module_1.CallsModule),
+        ],
         providers: [
             voice_service_1.VoiceService,
             voice_gateway_1.VoiceGateway,
             config_1.ConfigStore,
         ],
         exports: [voice_service_1.VoiceService, config_1.ConfigStore],
-        imports: [calls_module_1.CallsModule],
     })
 ], AiAgentModule);
 //# sourceMappingURL=ai-agent.module.js.map

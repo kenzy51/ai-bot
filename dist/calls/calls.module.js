@@ -12,8 +12,7 @@ const calls_service_1 = require("./calls.service");
 const calls_controller_1 = require("./calls.controller");
 const mongoose_1 = require("@nestjs/mongoose");
 const call_schema_1 = require("./schemas/call.schema");
-const voice_service_1 = require("../ai-agent/gemini/voice.service");
-const config_1 = require("../ai-agent/config/config");
+const ai_agent_module_1 = require("../ai-agent/ai-agent.module");
 let CallsModule = class CallsModule {
 };
 exports.CallsModule = CallsModule;
@@ -21,9 +20,10 @@ exports.CallsModule = CallsModule = __decorate([
     (0, common_1.Module)({
         imports: [
             mongoose_1.MongooseModule.forFeature([{ name: call_schema_1.Call.name, schema: call_schema_1.CallSchema }]),
+            (0, common_1.forwardRef)(() => ai_agent_module_1.AiAgentModule),
         ],
-        providers: [calls_service_1.CallsService, voice_service_1.VoiceService, config_1.ConfigStore],
         controllers: [calls_controller_1.CallsController],
+        providers: [calls_service_1.CallsService],
         exports: [calls_service_1.CallsService],
     })
 ], CallsModule);

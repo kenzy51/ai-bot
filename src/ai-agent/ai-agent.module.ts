@@ -1,16 +1,19 @@
-import { Module } from '@nestjs/common';
+import { forwardRef, Module } from '@nestjs/common';
 import { VoiceGateway } from './voice/voice.gateway';
 import { CallsModule } from 'src/calls/calls.module';
 import { VoiceService } from './gemini/voice.service';
 import { ConfigStore } from './config/config';
 
+// ai-agent.module.ts
 @Module({
+  imports: [
+    forwardRef(() => CallsModule), 
+  ],
   providers: [
     VoiceService,
     VoiceGateway,
-    ConfigStore, // 2. Add ConfigStore to providers
+    ConfigStore,
   ],
-  exports: [VoiceService, ConfigStore], // 3. Export both so other modules can use them
-  imports: [CallsModule],
+  exports: [VoiceService, ConfigStore], 
 })
 export class AiAgentModule {}
