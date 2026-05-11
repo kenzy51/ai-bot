@@ -5,11 +5,13 @@ import * as path from 'path';
 @Injectable()
 export class ConfigStore {
   private configPath = path.join(process.cwd(), 'bot-config.json');
-  
+
   private config = {
     knowledge: '',
+    prompt: '',
     keywords: [] as string[],
-    greeting: 'Hello, this is Sarah with TRT International. How can I help you move freight today?',
+    greeting:
+      'Hello, this is Sarah with TRT International. How can I help you move freight today?',
   };
 
   constructor() {
@@ -24,13 +26,19 @@ export class ConfigStore {
         console.log("✅ Sarah's brain loaded from disk.");
       }
     } catch (error) {
-      console.error("❌ Failed to load bot-config.json:", error);
+      console.error('❌ Failed to load bot-config.json:', error);
     }
   }
 
-  updateConfig(knowledge: string, keywords: string, greeting: string) {
+  updateConfig(
+    knowledge: string,
+    keywords: string,
+    greeting: string,
+    prompt: string,
+  ) {
     // 1. Update the live in-memory object
     this.config.knowledge = knowledge;
+    this.config.prompt = prompt; // 💡 Update the live in-
     this.config.keywords = keywords
       .split(',')
       .map((k) => k.replace(/['"]+/g, '').trim())
@@ -40,20 +48,21 @@ export class ConfigStore {
     // 2. Save to disk so it persists across restarts
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-      console.log("💾 Config saved to disk successfully.");
+      console.log('💾 Config saved to disk successfully.');
     } catch (error) {
-      console.error("❌ Failed to save config:", error);
+      console.error('❌ Failed to save config:', error);
     }
   }
-
-  // Ensure these are returning the LATEST values from 'this.config'
+  getPrompt() {
+    return this.config.prompt || '';
+  }
   getKnowledge() {
-    return this.config.knowledge || "";
+    return this.config.knowledge || '';
   }
   getKeywords() {
     return this.config.keywords || [];
   }
   getGreeting() {
-    return this.config.greeting || "Hello, this is Sarah.";
+    return this.config.greeting || 'Hello, this is Sarah.';
   }
 }
