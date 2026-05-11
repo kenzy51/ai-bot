@@ -50,6 +50,7 @@ let ConfigStore = class ConfigStore {
     configPath = path.join(process.cwd(), 'bot-config.json');
     config = {
         knowledge: '',
+        prompt: '',
         keywords: [],
         greeting: 'Hello, this is Sarah with TRT International. How can I help you move freight today?',
     };
@@ -65,11 +66,12 @@ let ConfigStore = class ConfigStore {
             }
         }
         catch (error) {
-            console.error("❌ Failed to load bot-config.json:", error);
+            console.error('❌ Failed to load bot-config.json:', error);
         }
     }
-    updateConfig(knowledge, keywords, greeting) {
+    updateConfig(knowledge, keywords, greeting, prompt) {
         this.config.knowledge = knowledge;
+        this.config.prompt = prompt;
         this.config.keywords = keywords
             .split(',')
             .map((k) => k.replace(/['"]+/g, '').trim())
@@ -77,20 +79,23 @@ let ConfigStore = class ConfigStore {
         this.config.greeting = greeting;
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-            console.log("💾 Config saved to disk successfully.");
+            console.log('💾 Config saved to disk successfully.');
         }
         catch (error) {
-            console.error("❌ Failed to save config:", error);
+            console.error('❌ Failed to save config:', error);
         }
     }
+    getPrompt() {
+        return this.config.prompt || '';
+    }
     getKnowledge() {
-        return this.config.knowledge || "";
+        return this.config.knowledge || '';
     }
     getKeywords() {
         return this.config.keywords || [];
     }
     getGreeting() {
-        return this.config.greeting || "Hello, this is Sarah.";
+        return this.config.greeting || 'Hello, this is Sarah.';
     }
 };
 exports.ConfigStore = ConfigStore;

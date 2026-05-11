@@ -9,6 +9,7 @@ export declare class LeadsController {
         knowledge: string;
         keywords: string;
         greeting: string;
+        prompt: string;
     }): Promise<{
         success: boolean;
     }>;
@@ -16,5 +17,6 @@ export declare class LeadsController {
         knowledge: string;
         keywords: string;
         greeting: string;
+        prompt: string;
     }>;
 }

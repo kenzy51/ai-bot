@@ -27,7 +27,7 @@ let LeadsController = class LeadsController {
         this.client = twilio(process.env.TWILIO_ACCOUNT_SID, process.env.TWILIO_AUTH_TOKEN);
     }
     async updateConfig(body) {
-        this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
+        this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting, body.prompt);
         console.log('✨ Sarah Updated: Knowledge + Keywords + Greeting');
         return { success: true };
     }
@@ -36,6 +36,7 @@ let LeadsController = class LeadsController {
             knowledge: this.configStore.getKnowledge(),
             keywords: this.configStore.getKeywords().join(', '),
             greeting: this.configStore.getGreeting(),
+            prompt: this.configStore.getPrompt(),
         };
     }
 };

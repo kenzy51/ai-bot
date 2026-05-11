@@ -26,9 +26,9 @@ export class LeadsController {
    */
   @Post('update-config')
   async updateConfig(
-    @Body() body: { knowledge: string; keywords: string; greeting: string },
+    @Body() body: { knowledge: string; keywords: string; greeting: string; prompt:string },
   ) {
-    this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting);
+    this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting, body.prompt);
     console.log('✨ Sarah Updated: Knowledge + Keywords + Greeting');
     return { success: true };
   }
@@ -43,6 +43,7 @@ export class LeadsController {
       knowledge: this.configStore.getKnowledge(),
       keywords: this.configStore.getKeywords().join(', '), 
       greeting: this.configStore.getGreeting(),
+      prompt: this.configStore.getPrompt(),
     };
   }
 }
