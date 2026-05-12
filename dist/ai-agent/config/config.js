@@ -51,8 +51,9 @@ let ConfigStore = class ConfigStore {
     config = {
         knowledge: '',
         prompt: '',
+        chatPrompt: '',
         keywords: [],
-        greeting: 'Hello, this is Sarah with TRT International. How can I help you move freight today?',
+        greeting: 'Hello, this is Sarah with TRT International. How can I help you today?',
     };
     constructor() {
         this.loadConfig();
@@ -61,32 +62,37 @@ let ConfigStore = class ConfigStore {
         try {
             if (fs.existsSync(this.configPath)) {
                 const fileData = fs.readFileSync(this.configPath, 'utf-8');
-                this.config = JSON.parse(fileData);
-                console.log("✅ Sarah's brain loaded from disk.");
+                const parsed = JSON.parse(fileData);
+                this.config = { ...this.config, ...parsed };
+                console.log("✅ Sarah's Neural Architecture loaded.");
             }
         }
         catch (error) {
             console.error('❌ Failed to load bot-config.json:', error);
         }
     }
-    updateConfig(knowledge, keywords, greeting, prompt) {
-        this.config.knowledge = knowledge;
-        this.config.prompt = prompt;
-        this.config.keywords = keywords
+    updateConfig(data) {
+        this.config.knowledge = data.knowledge;
+        this.config.prompt = data.prompt;
+        this.config.chatPrompt = data.chatPrompt;
+        this.config.greeting = data.greeting;
+        this.config.keywords = data.keywords
             .split(',')
             .map((k) => k.replace(/['"]+/g, '').trim())
             .filter((k) => k !== '');
-        this.config.greeting = greeting;
         try {
             fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-            console.log('💾 Config saved to disk successfully.');
+            console.log('💾 Neural layers synchronized to disk.');
         }
         catch (error) {
-            console.error('❌ Failed to save config:', error);
+            console.error('❌ Sync Failed:', error);
         }
     }
-    getPrompt() {
+    getVoicePrompt() {
         return this.config.prompt || '';
+    }
+    getChatPrompt() {
+        return this.config.chatPrompt || '';
     }
     getKnowledge() {
         return this.config.knowledge || '';

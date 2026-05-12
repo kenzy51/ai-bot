@@ -19,31 +19,34 @@ export class LeadsController {
     );
   }
 
- 
-
   /**
    * 💾 Sync Bot Configuration from Dashboard
    */
   @Post('update-config')
   async updateConfig(
-    @Body() body: { knowledge: string; keywords: string; greeting: string; prompt:string },
+    @Body()
+    body: {
+      knowledge: string;
+      keywords: string;
+      greeting: string;
+      prompt: string; // This is the Voice Prompt
+      chatPrompt: string; // This is the Chat Prompt
+    },
   ) {
-    this.configStore.updateConfig(body.knowledge, body.keywords, body.greeting, body.prompt);
-    console.log('✨ Sarah Updated: Knowledge + Keywords + Greeting');
+    this.configStore.updateConfig(body);
+
+    console.log('✨ Sarah Updated: Neural Layers Synchronized');
     return { success: true };
   }
 
-
-  /**
-   * ⚙️ Fetch current config for Dashboard UI
-   */
   @Get('config')
   async getConfig() {
     return {
       knowledge: this.configStore.getKnowledge(),
-      keywords: this.configStore.getKeywords().join(', '), 
+      keywords: this.configStore.getKeywords(),
       greeting: this.configStore.getGreeting(),
-      prompt: this.configStore.getPrompt(),
+      prompt: this.configStore.getVoicePrompt(),
+      chatPrompt: this.configStore.getChatPrompt(),
     };
   }
 }

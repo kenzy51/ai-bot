@@ -1,3 +1,4 @@
+
 import { Injectable } from '@nestjs/common';
 import * as fs from 'fs';
 import * as path from 'path';
@@ -6,12 +7,13 @@ import * as path from 'path';
 export class ConfigStore {
   private configPath = path.join(process.cwd(), 'bot-config.json');
 
+  // Default configuration structure
   private config = {
     knowledge: '',
-    prompt: '',
+    prompt: '',      // 💡 Primary Voice Prompt (Default)
+    chatPrompt: '',  // 💡 Specialized Chat Prompt
     keywords: [] as string[],
-    greeting:
-      'Hello, this is Sarah with TRT International. How can I help you move freight today?',
+    greeting: 'Hello, this is Sarah with TRT International. How can I help you today?',
   };
 
   constructor() {
@@ -22,46 +24,66 @@ export class ConfigStore {
     try {
       if (fs.existsSync(this.configPath)) {
         const fileData = fs.readFileSync(this.configPath, 'utf-8');
-        this.config = JSON.parse(fileData);
-        console.log("✅ Sarah's brain loaded from disk.");
+        const parsed = JSON.parse(fileData);
+        
+        this.config = { ...this.config, ...parsed };
+        console.log("✅ Sarah's Neural Architecture loaded.");
       }
     } catch (error) {
       console.error('❌ Failed to load bot-config.json:', error);
     }
   }
 
-  updateConfig(
-    knowledge: string,
-    keywords: string,
-    greeting: string,
-    prompt: string,
-  ) {
-    // 1. Update the live in-memory object
-    this.config.knowledge = knowledge;
-    this.config.prompt = prompt; // 💡 Update the live in-
-    this.config.keywords = keywords
+  /**
+   * Updates the configuration. 
+   * 'prompt' maps to the Voice Agent by default.
+   * 'chatPrompt' maps to the Web Chatbot specifically.
+   */
+  updateConfig(data: {
+    knowledge: string;
+    prompt: string;     // Voice Prompt
+    chatPrompt: string; // Chat Prompt
+    keywords: string;
+    greeting: string;
+  }) {
+    this.config.knowledge = data.knowledge;
+    this.config.prompt = data.prompt;
+    this.config.chatPrompt = data.chatPrompt;
+    this.config.greeting = data.greeting;
+    
+    this.config.keywords = data.keywords
       .split(',')
       .map((k) => k.replace(/['"]+/g, '').trim())
       .filter((k) => k !== '');
-    this.config.greeting = greeting;
 
-    // 2. Save to disk so it persists across restarts
     try {
       fs.writeFileSync(this.configPath, JSON.stringify(this.config, null, 2));
-      console.log('💾 Config saved to disk successfully.');
+      console.log('💾 Neural layers synchronized to disk.');
     } catch (error) {
-      console.error('❌ Failed to save config:', error);
+      console.error('❌ Sync Failed:', error);
     }
   }
-  getPrompt() {
+
+  // --- ACCESSORS ---
+
+  /** Returns the main prompt (Voice Agent) */
+  getVoicePrompt() {
     return this.config.prompt || '';
   }
+
+  /** Returns the specialized chat prompt (Web Widget) */
+  getChatPrompt() {
+    return this.config.chatPrompt || '';
+  }
+
   getKnowledge() {
     return this.config.knowledge || '';
   }
+
   getKeywords() {
     return this.config.keywords || [];
   }
+
   getGreeting() {
     return this.config.greeting || 'Hello, this is Sarah.';
   }

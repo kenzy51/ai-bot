@@ -118,7 +118,7 @@ export class VoiceService implements OnModuleInit {
     if (this.isProcessing) return '';
     this.isProcessing = true;
     const dynamicKnowledge = this.configStore.getKnowledge();
-    const dynamicSystemPrompt = this.configStore.getPrompt();
+    const dynamicSystemPrompt = this.configStore.getVoicePrompt();
     const leanHistory = passedHistory.slice(-10);
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
@@ -240,7 +240,7 @@ ${dynamicKnowledge}
 
   async generateTextOnlyResponse(userText: string, passedHistory: any[]) {
     const dynamicKnowledge = this.configStore.getKnowledge();
-    const dynamicSystemPrompt = this.configStore.getPrompt();
+      const dynamicSystemChatPrompt = this.configStore.getChatPrompt();
     const leanHistory = passedHistory.slice(-10);
 
     try {
@@ -254,7 +254,7 @@ ${dynamicKnowledge}
 You are Sarah, a Logistics Coordinator at TRT International. 
 (Note: You are currently chatting via text on the website).
 
-${dynamicSystemPrompt}
+${dynamicSystemChatPrompt}
 
 # KNOWLEDGE
 ${dynamicKnowledge}

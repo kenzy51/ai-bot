@@ -10,13 +10,15 @@ export declare class LeadsController {
         keywords: string;
         greeting: string;
         prompt: string;
+        chatPrompt: string;
     }): Promise<{
         success: boolean;
     }>;
     getConfig(): Promise<{
         knowledge: string;
-        keywords: string;
+        keywords: string[];
         greeting: string;
         prompt: string;
+        chatPrompt: string;
     }>;
 }

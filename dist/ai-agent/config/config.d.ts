@@ -3,8 +3,15 @@ export declare class ConfigStore {
     private config;
     constructor();
     private loadConfig;
-    updateConfig(knowledge: string, keywords: string, greeting: string, prompt: string): void;
-    getPrompt(): string;
+    updateConfig(data: {
+        knowledge: string;
+        prompt: string;
+        chatPrompt: string;
+        keywords: string;
+        greeting: string;
+    }): void;
+    getVoicePrompt(): string;
+    getChatPrompt(): string;
     getKnowledge(): string;
     getKeywords(): string[];
     getGreeting(): string;

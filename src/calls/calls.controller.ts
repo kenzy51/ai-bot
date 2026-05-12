@@ -113,9 +113,7 @@ export class CallsController {
     return res.status(200).send(twiml);
   }
 
-  /**
-   * 🎙️ Recording Callback
-   */
+
   @Post('recording-callback')
   async handleRecordingCallback(@Body() body: any) {
     const { CallSid, RecordingUrl } = body;

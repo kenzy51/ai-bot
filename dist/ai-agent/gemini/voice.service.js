@@ -117,7 +117,7 @@ let VoiceService = class VoiceService {
             return '';
         this.isProcessing = true;
         const dynamicKnowledge = this.configStore.getKnowledge();
-        const dynamicSystemPrompt = this.configStore.getPrompt();
+        const dynamicSystemPrompt = this.configStore.getVoicePrompt();
         const leanHistory = passedHistory.slice(-10);
         const now = new Date();
         const nyTime = now.toLocaleString('en-US', {
@@ -227,7 +227,7 @@ ${dynamicKnowledge}
     }
     async generateTextOnlyResponse(userText, passedHistory) {
         const dynamicKnowledge = this.configStore.getKnowledge();
-        const dynamicSystemPrompt = this.configStore.getPrompt();
+        const dynamicSystemChatPrompt = this.configStore.getChatPrompt();
         const leanHistory = passedHistory.slice(-10);
         try {
             const response = await this.groq.chat.completions.create({
@@ -240,7 +240,7 @@ ${dynamicKnowledge}
 You are Sarah, a Logistics Coordinator at TRT International. 
 (Note: You are currently chatting via text on the website).
 
-${dynamicSystemPrompt}
+${dynamicSystemChatPrompt}
 
 # KNOWLEDGE
 ${dynamicKnowledge}
