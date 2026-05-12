@@ -26,7 +26,7 @@ export class VoiceService implements OnModuleInit {
 
   constructor(
     private readonly callsService: CallsService,
-    private readonly configStore: ConfigStore, 
+    private readonly configStore: ConfigStore,
   ) {
     sgMail.setApiKey(process.env.SENDGRID_API_KEY!);
     this.elevenlabs = new ElevenLabsClient({ apiKey: process.env.ELEVEN });
@@ -118,7 +118,7 @@ export class VoiceService implements OnModuleInit {
     if (this.isProcessing) return '';
     this.isProcessing = true;
     const dynamicKnowledge = this.configStore.getKnowledge();
-    const dynamicSystemPrompt = this.configStore.getPrompt(); 
+    const dynamicSystemPrompt = this.configStore.getPrompt();
     const leanHistory = passedHistory.slice(-10);
     const now = new Date();
     const nyTime = now.toLocaleString('en-US', {
@@ -235,6 +235,47 @@ ${dynamicKnowledge}
       this.isProcessing = false;
     }
   }
+  // ONLY TEXT
+  // Inside VoiceService class in voice.service.ts
+
+  async generateTextOnlyResponse(userText: string, passedHistory: any[]) {
+    const dynamicKnowledge = this.configStore.getKnowledge();
+    const dynamicSystemPrompt = this.configStore.getPrompt();
+    const leanHistory = passedHistory.slice(-10);
+
+    try {
+      const response = await this.groq.chat.completions.create({
+        model: 'llama-3.1-8b-instant',
+        messages: [
+          {
+            role: 'system',
+            content: `
+# ROLE
+You are Sarah, a Logistics Coordinator at TRT International. 
+(Note: You are currently chatting via text on the website).
+
+${dynamicSystemPrompt}
+
+# KNOWLEDGE
+${dynamicKnowledge}
+`,
+          },
+          ...leanHistory,
+          { role: 'user', content: userText },
+        ],
+        temperature: 0.7,
+      });
+
+      return (
+        response.choices[0]?.message?.content ||
+        "I'm sorry, I couldn't process that."
+      );
+    } catch (err) {
+      console.error('❌ Groq Chat Error:', err);
+      return "I'm having trouble connecting to my logistics database. Please try again in a moment.";
+    }
+  }
+
   async transferCall(sid: string) {
     try {
       console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);

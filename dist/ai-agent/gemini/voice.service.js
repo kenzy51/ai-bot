@@ -225,6 +225,40 @@ ${dynamicKnowledge}
             this.isProcessing = false;
         }
     }
+    async generateTextOnlyResponse(userText, passedHistory) {
+        const dynamicKnowledge = this.configStore.getKnowledge();
+        const dynamicSystemPrompt = this.configStore.getPrompt();
+        const leanHistory = passedHistory.slice(-10);
+        try {
+            const response = await this.groq.chat.completions.create({
+                model: 'llama-3.1-8b-instant',
+                messages: [
+                    {
+                        role: 'system',
+                        content: `
+# ROLE
+You are Sarah, a Logistics Coordinator at TRT International. 
+(Note: You are currently chatting via text on the website).
+
+${dynamicSystemPrompt}
+
+# KNOWLEDGE
+${dynamicKnowledge}
+`,
+                    },
+                    ...leanHistory,
+                    { role: 'user', content: userText },
+                ],
+                temperature: 0.7,
+            });
+            return (response.choices[0]?.message?.content ||
+                "I'm sorry, I couldn't process that.");
+        }
+        catch (err) {
+            console.error('❌ Groq Chat Error:', err);
+            return "I'm having trouble connecting to my logistics database. Please try again in a moment.";
+        }
+    }
     async transferCall(sid) {
         try {
             console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);

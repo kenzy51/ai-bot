@@ -23,6 +23,7 @@ export declare class VoiceService implements OnModuleInit {
     makeOutboundCall(to: string): Promise<void>;
     private getGroqTools;
     generateResponse(userText: string, passedHistory: any[], onAudioData: (buffer: Buffer) => void): Promise<string>;
+    generateTextOnlyResponse(userText: string, passedHistory: any[]): Promise<string>;
     transferCall(sid: string): Promise<void>;
     onCallDisconnect(finalHistory: any[], sid: string): Promise<void>;
     private logToDatabase;
