@@ -8,36 +8,37 @@ var __decorate = (this && this.__decorate) || function (decorators, target, key,
 var __metadata = (this && this.__metadata) || function (k, v) {
     if (typeof Reflect === "object" && typeof Reflect.metadata === "function") return Reflect.metadata(k, v);
 };
-var __param = (this && this.__param) || function (paramIndex, decorator) {
-    return function (target, key) { decorator(target, key, paramIndex); }
-};
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.ChatGateway = void 0;
 const websockets_1 = require("@nestjs/websockets");
 const voice_service_1 = require("../gemini/voice.service");
-const socket_io_1 = require("socket.io");
 let ChatGateway = class ChatGateway {
     voiceService;
     constructor(voiceService) {
         this.voiceService = voiceService;
     }
+    handleConnection(client) {
+        console.log(`📡 New Web Chat Connection: ${client.id || 'WebUser'}`);
+    }
     async handleMessage(client, payload) {
-        console.log(`💬 Web Message from ${client.id}: ${payload.text}`);
-        const aiResponse = await this.voiceService.generateTextOnlyResponse(payload.text, payload.history);
-        client.emit('ai_response', aiResponse);
+        const data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+        console.log(`💬 Message: ${data.text}`);
+        const aiResponse = await this.voiceService.generateTextOnlyResponse(data.text, data.history || []);
+        client.send(JSON.stringify({
+            event: 'ai_response',
+            data: aiResponse
+        }));
     }
 };
 exports.ChatGateway = ChatGateway;
 __decorate([
     (0, websockets_1.SubscribeMessage)('message'),
-    __param(0, (0, websockets_1.ConnectedSocket)()),
-    __param(1, (0, websockets_1.MessageBody)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [socket_io_1.Socket, Object]),
+    __metadata("design:paramtypes", [Object, Object]),
     __metadata("design:returntype", Promise)
 ], ChatGateway.prototype, "handleMessage", null);
 exports.ChatGateway = ChatGateway = __decorate([
-    (0, websockets_1.WebSocketGateway)({ namespace: 'chat', cors: { origin: '*' } }),
+    (0, websockets_1.WebSocketGateway)({ path: '/chat-stream', cors: { origin: '*' } }),
     __metadata("design:paramtypes", [voice_service_1.VoiceService])
 ], ChatGateway);
 //# sourceMappingURL=chat.gateway.js.map

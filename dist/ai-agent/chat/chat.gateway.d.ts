@@ -1,10 +1,8 @@
+import { OnGatewayConnection } from "@nestjs/websockets";
 import { VoiceService } from "../gemini/voice.service";
-import { Socket } from "socket.io";
-export declare class ChatGateway {
+export declare class ChatGateway implements OnGatewayConnection {
     private readonly voiceService;
     constructor(voiceService: VoiceService);
-    handleMessage(client: Socket, payload: {
-        text: string;
-        history: any[];
-    }): Promise<void>;
+    handleConnection(client: any): void;
+    handleMessage(client: any, payload: any): Promise<void>;
 }
