@@ -1,21 +1,30 @@
 // chat.gateway.ts
-import { SubscribeMessage, WebSocketGateway } from "@nestjs/websockets";
+import { 
+  SubscribeMessage, 
+  WebSocketGateway, 
+  ConnectedSocket, 
+  MessageBody 
+} from "@nestjs/websockets";
 import { VoiceService } from "../gemini/voice.service";
+import { Socket } from "socket.io";
 
 @WebSocketGateway({ namespace: 'chat', cors: { origin: '*' } })
 export class ChatGateway {
-  // 💡 Inject the service via constructor to use the shared "Sarah" brain
   constructor(private readonly voiceService: VoiceService) {}
 
   @SubscribeMessage('message')
-  async handleMessage(client: any, payload: { text: string; history: any[] }) {
-    // 💡 This calls the new text-only method we'll add below
+  async handleMessage(
+    @ConnectedSocket() client: Socket, 
+    @MessageBody() payload: { text: string; history: any[] }
+  ) {
+    console.log(`💬 Web Message from ${client.id}: ${payload.text}`);
+
     const aiResponse = await this.voiceService.generateTextOnlyResponse(
       payload.text,
       payload.history
     );
 
-    // 💡 Return the response so the widget can display it
-    return { event: 'ai_response', data: aiResponse };
+    // 💡 client.emit is more explicit and reliable for Socket.io
+    client.emit('ai_response', aiResponse);
   }
 }
