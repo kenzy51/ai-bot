@@ -74,15 +74,31 @@ export class VoiceService implements OnModuleInit {
       console.error('❌ Call failed:', error);
     }
   }
+  private readonly DEPARTMENTS = {
+    sales: '+19177826487',
+    dispatch: '+19177826487',
+  };
+
   private getGroqTools(): any[] {
     return [
       {
         type: 'function',
         function: {
-          name: 'transfer_to_sales',
+          name: 'transfer_to_department',
           description:
-            'Transfers the caller to a sales representative for a custom quote or account setup.',
-          parameters: { type: 'object', properties: {} },
+            'Transfers the caller to a specific department based on their need.',
+          parameters: {
+            type: 'object',
+            properties: {
+              dept: {
+                type: 'string',
+                enum: Object.keys(this.DEPARTMENTS), // ['sales', 'dispatch']
+                description: 'The department key to transfer to.',
+              },
+            },
+            required: ['dept'],
+          },
+          required: ['dept'],
         },
       },
       {
@@ -210,9 +226,19 @@ ${dynamicKnowledge}
           }
         }
         const toolCall = chunk.choices[0]?.delta?.tool_calls?.[0];
-        if (toolCall?.function?.name === 'transfer_call') {
-          await this.transferCall(this.currentCallSid);
-          return 'Transferring you now.';
+        if (toolCall?.function?.name === 'transfer_to_department') {
+          // Extract the department choice from the AI
+          const args = JSON.parse(toolCall.function.arguments || '{}');
+          const targetDept = args.dept;
+          const targetNumber = this.DEPARTMENTS[targetDept];
+
+          if (targetNumber) {
+            console.log(
+              `🔀 Sarah is routing call to ${targetDept}: ${targetNumber}`,
+            );
+            await this.executeTransfer(this.currentCallSid, targetNumber);
+            return `One moment, I'm connecting you to our ${targetDept.replace('_', ' ')} team.`;
+          }
         }
       }
       // TRICK
@@ -240,7 +266,7 @@ ${dynamicKnowledge}
 
   async generateTextOnlyResponse(userText: string, passedHistory: any[]) {
     const dynamicKnowledge = this.configStore.getKnowledge();
-      const dynamicSystemChatPrompt = this.configStore.getChatPrompt();
+    const dynamicSystemChatPrompt = this.configStore.getChatPrompt();
     const leanHistory = passedHistory.slice(-10);
 
     try {
@@ -275,18 +301,14 @@ ${dynamicKnowledge}
       return "I'm having trouble connecting to my logistics database. Please try again in a moment.";
     }
   }
-
-  async transferCall(sid: string) {
+  async executeTransfer(sid: string, phoneNumber: string) {
     try {
-      console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);
-
       await this.twilioClient.calls(sid).update({
-        // url: 'https://lesa-jovial-blushfully.ngrok-free.dev/calls/transfer-dial',
-        url: 'https://fusion-ai-bot.onrender.com/calls/transfer-dial',
+        url: `https://fusion-ai-bot.onrender.com/calls/transfer-dial?to=${encodeURIComponent(phoneNumber)}`,
         method: 'POST',
       });
     } catch (err) {
-      console.error('❌ Twilio Transfer Error:', err);
+      console.error('❌ Transfer Failed:', err);
     }
   }
   async onCallDisconnect(finalHistory: any[], sid: string) {

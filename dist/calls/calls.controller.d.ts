@@ -7,7 +7,7 @@ export declare class CallsController {
     private client;
     constructor(callsService: CallsService, voiceService: VoiceService);
     handleIncoming(body: any, res: any): Promise<any>;
-    getTransferDial(res: any): Promise<any>;
+    getTransferDial(to: string, res: any): Promise<any>;
     handleRecordingCallback(body: any): Promise<{
         status: string;
     }>;

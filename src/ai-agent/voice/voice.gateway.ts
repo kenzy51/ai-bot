@@ -112,8 +112,6 @@ handleConnection(twilioWs: WebSocket) {
 
     if (callSid && history) {
       console.log(`📊 Finalizing Log for SID: ${callSid}`);
-
-      // Pass the callSid EXPLICITLY to the service
       await this.voiceService.onCallDisconnect(history, callSid);
 
       this.sessions.delete(twilioWs);

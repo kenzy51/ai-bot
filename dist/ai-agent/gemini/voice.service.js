@@ -79,14 +79,29 @@ let VoiceService = class VoiceService {
             console.error('❌ Call failed:', error);
         }
     }
+    DEPARTMENTS = {
+        sales: '+19177826487',
+        dispatch: '+19177826487',
+    };
     getGroqTools() {
         return [
             {
                 type: 'function',
                 function: {
-                    name: 'transfer_to_sales',
-                    description: 'Transfers the caller to a sales representative for a custom quote or account setup.',
-                    parameters: { type: 'object', properties: {} },
+                    name: 'transfer_to_department',
+                    description: 'Transfers the caller to a specific department based on their need.',
+                    parameters: {
+                        type: 'object',
+                        properties: {
+                            dept: {
+                                type: 'string',
+                                enum: Object.keys(this.DEPARTMENTS),
+                                description: 'The department key to transfer to.',
+                            },
+                        },
+                        required: ['dept'],
+                    },
+                    required: ['dept'],
                 },
             },
             {
@@ -201,9 +216,15 @@ ${dynamicKnowledge}
                     }
                 }
                 const toolCall = chunk.choices[0]?.delta?.tool_calls?.[0];
-                if (toolCall?.function?.name === 'transfer_call') {
-                    await this.transferCall(this.currentCallSid);
-                    return 'Transferring you now.';
+                if (toolCall?.function?.name === 'transfer_to_department') {
+                    const args = JSON.parse(toolCall.function.arguments || '{}');
+                    const targetDept = args.dept;
+                    const targetNumber = this.DEPARTMENTS[targetDept];
+                    if (targetNumber) {
+                        console.log(`🔀 Sarah is routing call to ${targetDept}: ${targetNumber}`);
+                        await this.executeTransfer(this.currentCallSid, targetNumber);
+                        return `One moment, I'm connecting you to our ${targetDept.replace('_', ' ')} team.`;
+                    }
                 }
             }
             if (sentenceBuffer.trim()) {
@@ -259,16 +280,15 @@ ${dynamicKnowledge}
             return "I'm having trouble connecting to my logistics database. Please try again in a moment.";
         }
     }
-    async transferCall(sid) {
+    async executeTransfer(sid, phoneNumber) {
         try {
-            console.log(`🔀 Redirecting Call ${sid} to new Dial URL...`);
             await this.twilioClient.calls(sid).update({
-                url: 'https://fusion-ai-bot.onrender.com/calls/transfer-dial',
+                url: `https://fusion-ai-bot.onrender.com/calls/transfer-dial?to=${encodeURIComponent(phoneNumber)}`,
                 method: 'POST',
             });
         }
         catch (err) {
-            console.error('❌ Twilio Transfer Error:', err);
+            console.error('❌ Transfer Failed:', err);
         }
     }
     async onCallDisconnect(finalHistory, sid) {

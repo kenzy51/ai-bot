@@ -39,7 +39,7 @@ let CallsController = class CallsController {
 <Response>
   <Start>
     <Recording 
-      recordingStatusCallback="https://${process.env.SERVER_URL}/calls/recording-callback"
+      recordingStatusCallback="https://${rawUrl}/calls/recording-callback"
     />
   </Start>
   <Connect>
@@ -49,16 +49,19 @@ let CallsController = class CallsController {
         res.set('Content-Type', 'text/xml');
         return res.status(200).send(twiml);
     }
-    async getTransferDial(res) {
+    async getTransferDial(to, res) {
+        const targetNumber = to || '+19177826487';
+        const rawUrl = process.env.SERVER_URL || 'fusion-ai-bot.onrender.com';
+        const baseUrl = rawUrl.startsWith('http') ? rawUrl : `https://${rawUrl}`;
         const twiml = `<?xml version="1.0" encoding="UTF-8"?>
-    <Response>
-      <Say>Connecting you to the office now.</Say>
-      <Dial record="record-from-answer-dual" 
-            recordingStatusCallback="https://${process.env.SERVER_URL}/calls/recording-callback" 
-            callerId="+19297022797">
-        <Number>+19297696545</Number>
-      </Dial>
-    </Response>`;
+  <Response>
+    <Say>One moment, connecting you to the department now.</Say>
+    <Dial record="record-from-answer-dual" 
+          recordingStatusCallback="${baseUrl}/calls/recording-callback" 
+          callerId="+19297022797">
+      <Number>${targetNumber}</Number>
+    </Dial>
+  </Response>`;
         res.set('Content-Type', 'text/xml');
         return res.status(200).send(twiml);
     }
@@ -70,18 +73,17 @@ let CallsController = class CallsController {
                 : `${RecordingUrl}.wav`;
             try {
                 await this.callsService.updateCallRecording(CallSid, directUrl);
-                console.log(`✅ Recording link synced for SID ${CallSid}: ${directUrl}`);
+                console.log(`✅ Recording link synced: ${directUrl}`);
             }
             catch (error) {
-                console.error('❌ DB Update Error during callback:', error.message);
+                console.error('❌ DB Update Error:', error.message);
             }
         }
         return { status: 'ok' };
     }
     async streamRecording(url, res) {
-        if (!url || url === 'undefined' || url === 'null' || url === '') {
-            return res.status(400).send('Recording URL is required');
-        }
+        if (!url || url === 'undefined')
+            return res.status(400).send('URL required');
         try {
             const response = await fetch(url, {
                 headers: {
@@ -103,8 +105,6 @@ let CallsController = class CallsController {
         }
         catch (error) {
             console.error('❌ Proxy Crash:', error.message);
-            if (!res.headersSent)
-                res.status(500).send('Internal Error');
         }
     }
     getClinicCalls(clinicId) {
@@ -122,9 +122,10 @@ __decorate([
 ], CallsController.prototype, "handleIncoming", null);
 __decorate([
     (0, common_1.Post)('transfer-dial'),
-    __param(0, (0, common_1.Res)()),
+    __param(0, (0, common_1.Query)('to')),
+    __param(1, (0, common_1.Res)()),
     __metadata("design:type", Function),
-    __metadata("design:paramtypes", [Object]),
+    __metadata("design:paramtypes", [String, Object]),
     __metadata("design:returntype", Promise)
 ], CallsController.prototype, "getTransferDial", null);
 __decorate([
