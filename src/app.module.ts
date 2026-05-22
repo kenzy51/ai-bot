@@ -9,6 +9,9 @@ import { config } from 'dotenv';
 import { MongooseModule } from '@nestjs/mongoose';
 import { ConfigStore } from './ai-agent/config/config';
 import { CallsController } from './calls/calls.controller';
+import { TenantModule } from './tenant/tenant.module';
+import { UserModule } from './user/user.module';
+import { AuthModule } from './auth/auth.module';
 @Module({
   imports: [
     AiAgentModule,
@@ -18,6 +21,9 @@ import { CallsController } from './calls/calls.controller';
       family: 4, 
       serverSelectionTimeoutMS: 5000, // Faster failure feedback
     }),
+    TenantModule,
+    UserModule,
+    AuthModule,
   ],
   controllers: [AppController, LeadsController],
   providers: [AppService],

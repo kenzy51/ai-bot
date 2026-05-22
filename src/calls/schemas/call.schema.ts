@@ -1,11 +1,16 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
-
+import { Document, Schema as MongooseSchema } from 'mongoose'; // 🎯 ДОБАВЛЕНО: Импорт Schema из чистого mongoose
 @Schema({ timestamps: true })
 export class Call extends Document {
   @Prop({ required: true, index: true })
   businessId: string; // Linking this call to a specific clinic (Tribeca, etc.)
-
+  @Prop({
+    type: MongooseSchema.Types.ObjectId,
+    ref: 'Tenant',
+    required: true,
+    index: true,
+  })
+  tenantId: string;
   @Prop()
   patientPhone: string;
 
