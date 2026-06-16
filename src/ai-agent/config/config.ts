@@ -41,8 +41,8 @@ export class ConfigStore {
    */
   updateConfig(data: {
     knowledge: string;
-    prompt: string;     // Voice Prompt
-    chatPrompt: string; // Chat Prompt
+    prompt: string;     
+    chatPrompt: string;
     keywords: string;
     greeting: string;
   }) {

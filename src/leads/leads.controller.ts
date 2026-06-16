@@ -1,8 +1,8 @@
 /* eslint-disable prettier/prettier */
 import { Controller, Post, Body, Header, Get } from '@nestjs/common';
 import { ConfigStore } from 'src/ai-agent/config/config';
-import { VoiceService } from 'src/ai-agent/gemini/voice.service';
-import { CallsService } from 'src/calls/calls.service';
+import { VoiceService } from 'src/ai-agent/gemini/chat.service';
+import { CallsService } from 'src/sessions/session.service';
 import twilio = require('twilio');
 
 @Controller('leads')

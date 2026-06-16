@@ -8,6 +8,6 @@ import { Tenant, TenantSchema } from './tenant.schema';
     MongooseModule.forFeature([{ name: Tenant.name, schema: TenantSchema }]),
   ],
   providers: [TenantService],
-  exports: [TenantService], 
+  exports: [TenantService, MongooseModule]
 })
 export class TenantModule {}
